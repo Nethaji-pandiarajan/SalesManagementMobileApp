@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import CustomButton from '../components/CustomButton';
+import CONFIG from '../config/config';
 
 const LoginScreen = () => {
   const { login } = useAuth();
@@ -52,7 +53,7 @@ const LoginScreen = () => {
 
     setLoading(true);
     try {
-      const backendUrl = 'http://192.168.1.15:5000';
+      const backendUrl = CONFIG.API_BASE_URL;
 
       console.log('🚀 Sending login to:', `${backendUrl}/login`);
       console.log('📧 Email:', email.trim());
