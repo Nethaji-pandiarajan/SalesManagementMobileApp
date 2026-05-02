@@ -29,9 +29,9 @@ const LoginScreen = () => {
     const newErrors = { email: '', password: '' };
 
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'Email or username is required';
       valid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    } else if (email.trim().toLowerCase() !== 'admin' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       newErrors.email = 'Enter a valid email address';
       valid = false;
     }
@@ -53,15 +53,26 @@ const LoginScreen = () => {
 
     setLoading(true);
     try {
+      const emailValue = email.trim().toLowerCase();
+
+      // Mock Admin Login Intercept
+      if (emailValue === 'admin') {
+        setTimeout(async () => {
+          await login('mock-admin-token-12345', { role: 'admin', email: 'admin' });
+          setLoading(false);
+        }, 800); // simulate network delay
+        return;
+      }
+
       const backendUrl = CONFIG.API_BASE_URL;
 
       console.log('🚀 Sending login to:', `${backendUrl}/login`);
-      console.log('📧 Email:', email.trim());
+      console.log('📧 Email:', emailValue);
 
       const response = await fetch(`${backendUrl}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ email: emailValue, password }),
       });
 
       const data = await response.json();
@@ -117,7 +128,7 @@ const LoginScreen = () => {
             <View style={[styles.inputContainer, errors.email ? styles.inputError : null]}>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder="Enter your email or 'admin'"
                 placeholderTextColor="#94A3B8"
                 autoCapitalize="none"
                 autoCorrect={false}

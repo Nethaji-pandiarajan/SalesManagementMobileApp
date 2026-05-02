@@ -14,7 +14,15 @@ import BillingScreen from './src/screens/BillingScreen';
 import AddShopScreen from './src/screens/AddShopScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
 import ReconciliationScreen from './src/screens/ReconciliationScreen';
-import { SalesScreen } from './src/screens/PlaceholderScreens';
+import {
+  SalesScreen,
+  ProductManagementScreen,
+  UserManagementScreen,
+  SupplyManagementScreen,
+  AdminSalesReportsScreen,
+  AdminEODScreen,
+} from './src/screens/PlaceholderScreens';
+import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +43,9 @@ function RootNavigator() {
         {isLoggedIn ? (
           // === APP SCREENS (back button stays within app, never reaches Login) ===
           <>
+            {userData?.role === 'admin' && (
+              <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+            )}
             <Stack.Screen
               name="Dashboard"
               component={DashboardScreen}
@@ -47,6 +58,12 @@ function RootNavigator() {
             <Stack.Screen name="Sales" component={SalesScreen} />
             <Stack.Screen name="Reports" component={ReportsScreen} />
             <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
+            {/* Admin Specific Routes */}
+            <Stack.Screen name="ProductManagement" component={ProductManagementScreen} />
+            <Stack.Screen name="UserManagement" component={UserManagementScreen} />
+            <Stack.Screen name="SupplyManagement" component={SupplyManagementScreen} />
+            <Stack.Screen name="AdminSalesReports" component={AdminSalesReportsScreen} />
+            <Stack.Screen name="AdminEOD" component={AdminEODScreen} />
           </>
         ) : (
           // === AUTH SCREENS (Login only) ===

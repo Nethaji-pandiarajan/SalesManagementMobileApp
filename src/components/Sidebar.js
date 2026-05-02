@@ -15,7 +15,7 @@ const { width, height } = Dimensions.get('window');
 const SIDEBAR_WIDTH = width * 0.75;
 
 const Sidebar = ({ isOpen, onClose, navigation, username }) => {
-  const { logout } = useAuth();
+  const { logout, userData } = useAuth();
   const slideAnim = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -49,13 +49,26 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     }
   }, [isOpen]);
 
-  const menuItems = [
+  const isAdmin = userData?.role === 'admin';
+
+  const adminMenuItems = [
+    { name: 'Dashboard', icon: '⌂', route: 'AdminDashboard' },
+    { name: 'Product Management', icon: '📦', route: 'ProductManagement' },
+    { name: 'User Management', icon: '👥', route: 'UserManagement' },
+    { name: 'Supply Management', icon: '🚚', route: 'SupplyManagement' },
+    { name: 'Sales Reports', icon: '📊', route: 'AdminSalesReports' },
+    { name: 'EOD Reconciliation', icon: '💰', route: 'AdminEOD' },
+  ];
+
+  const executiveMenuItems = [
     { name: 'Dashboard', icon: '⌂', route: 'Dashboard' },
     { name: 'Inventory', icon: '☷', route: 'Inventory' },
     { name: 'Shops', icon: '⚲', route: 'Shops' },
     { name: 'Reports', icon: '◫', route: 'Reports' },
     { name: 'Sales audit', icon: '◈', route: 'Reconciliation' },
   ];
+
+  const menuItems = isAdmin ? adminMenuItems : executiveMenuItems;
 
   const handleNavigate = (route) => {
     onClose();
@@ -71,9 +84,9 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
 
   return (
     <View style={[styles.overlayContainer, { pointerEvents: isOpen ? 'auto' : 'none' }]}>
-      <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
-      </Animated.View>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
+      </TouchableWithoutFeedback>
 
       <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
         <View style={styles.sidebarHeader}>
