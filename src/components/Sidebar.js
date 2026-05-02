@@ -9,11 +9,13 @@ import {
   TouchableWithoutFeedback,
   Image,
 } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 const SIDEBAR_WIDTH = width * 0.75;
 
 const Sidebar = ({ isOpen, onClose, navigation, username }) => {
+  const { logout } = useAuth();
   const slideAnim = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -62,12 +64,9 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     onClose();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
+    await logout(); // Clears token + switches App.tsx back to AuthStack
   };
 
   return (

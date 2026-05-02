@@ -20,6 +20,14 @@ const DashboardScreen = ({ route, navigation }) => {
   const { username } = route.params || { username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
+  // Dynamic current date
+  const currentDate = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   // Mock Data
   const stats = [
     { label: 'Total Stocks', value: '1,250', color: '#FFFFFF', icon: '⊞' },
@@ -78,7 +86,7 @@ const DashboardScreen = ({ route, navigation }) => {
         {/* Welcome Message */}
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeName}>Hello, {username}</Text>
-          <Text style={styles.welcomeDate}>Monday, 27 April 2026</Text>
+          <Text style={styles.welcomeDate}>{currentDate}</Text>
         </View>
 
         {/* Stats Grid */}

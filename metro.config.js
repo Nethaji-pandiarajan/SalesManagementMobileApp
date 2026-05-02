@@ -1,3 +1,11 @@
+if (!Array.prototype.toReversed) {
+  Object.defineProperty(Array.prototype, 'toReversed', {
+    value: function() {
+      return this.slice().reverse();
+    }
+  });
+}
+
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 
 /**

@@ -1,7 +1,11 @@
 import React from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+
 import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import InventoryScreen from './src/screens/InventoryScreen';
@@ -14,30 +18,62 @@ import { SalesScreen } from './src/screens/PlaceholderScreens';
 
 const Stack = createNativeStackNavigator();
 
+function RootNavigator() {
+  const { isLoggedIn, isLoading, userData } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#087E66" />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+        {isLoggedIn ? (
+          // === APP SCREENS (back button stays within app, never reaches Login) ===
+          <>
+            <Stack.Screen
+              name="Dashboard"
+              component={DashboardScreen}
+              initialParams={{ username: userData?.email?.split('@')[0] || 'User' }}
+            />
+            <Stack.Screen name="Inventory" component={InventoryScreen} />
+            <Stack.Screen name="Shops" component={ShopsScreen} />
+            <Stack.Screen name="Billing" component={BillingScreen} />
+            <Stack.Screen name="AddShop" component={AddShopScreen} />
+            <Stack.Screen name="Sales" component={SalesScreen} />
+            <Stack.Screen name="Reports" component={ReportsScreen} />
+            <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
+          </>
+        ) : (
+          // === AUTH SCREENS (Login only) ===
+          <Stack.Screen name="Login" component={LoginScreen} />
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
 function App(): React.JSX.Element {
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <Stack.Navigator 
-          initialRouteName="Login"
-          screenOptions={{ 
-            headerShown: false,
-            animation: 'slide_from_right'
-          }}
-        >
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Dashboard" component={DashboardScreen} />
-          <Stack.Screen name="Inventory" component={InventoryScreen} />
-          <Stack.Screen name="Shops" component={ShopsScreen} />
-          <Stack.Screen name="Billing" component={BillingScreen} />
-          <Stack.Screen name="AddShop" component={AddShopScreen} />
-          <Stack.Screen name="Sales" component={SalesScreen} />
-          <Stack.Screen name="Reports" component={ReportsScreen} />
-          <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+});
 
 export default App;

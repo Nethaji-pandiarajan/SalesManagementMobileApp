@@ -10,19 +10,74 @@ import {
   ScrollView,
   StatusBar,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
 import CustomButton from '../components/CustomButton';
 
-const LoginScreen = ({ navigation }) => {
+const LoginScreen = () => {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (email.trim().toLowerCase() === 'user') {
-      navigation.navigate('Dashboard', { username: email.trim() });
-    } else {
-      alert('Invalid Username. Please use "user" to sign in.');
+  const validateInputs = () => {
+    let valid = true;
+    const newErrors = { email: '', password: '' };
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+      valid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = 'Enter a valid email address';
+      valid = false;
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required';
+      valid = false;
+    } else if (password.length < 4) {
+      newErrors.password = 'Password must be at least 4 characters';
+      valid = false;
+    }
+
+    setErrors(newErrors);
+    return valid;
+  };
+
+  const handleLogin = async () => {
+    if (!validateInputs()) return;
+
+    setLoading(true);
+    try {
+      const backendUrl = 'http://192.168.1.15:5000';
+
+      console.log('🚀 Sending login to:', `${backendUrl}/login`);
+      console.log('📧 Email:', email.trim());
+
+      const response = await fetch(`${backendUrl}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+
+      const data = await response.json();
+      console.log('📦 Response:', JSON.stringify(data));
+
+      if (response.ok) {
+        // Calling login() saves the token and updates global auth state.
+        // App.tsx automatically switches to AppStack — no navigation.reset needed.
+        await login(data.token, data.user);
+      } else {
+        setErrors(prev => ({ ...prev, password: data.error || 'Invalid credentials' }));
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrors(prev => ({ ...prev, email: 'Network error. Make sure the server is running.' }));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,37 +112,53 @@ const LoginScreen = ({ navigation }) => {
 
           {/* Form Section */}
           <View style={styles.form}>
-            <View style={styles.inputContainer}>
+            {/* Email Input */}
+            <View style={[styles.inputContainer, errors.email ? styles.inputError : null]}>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your username"
+                placeholder="Enter your email"
                 placeholderTextColor="#94A3B8"
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoFocus={true}
-                showSoftInputOnFocus={true}
+                keyboardType="email-address"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
+                }}
               />
             </View>
+            {errors.email ? <Text style={styles.errorText}>⚠ {errors.email}</Text> : null}
 
-            <View style={styles.inputContainer}>
+            {/* Password Input */}
+            <View style={[styles.inputContainer, errors.password ? styles.inputError : null]}>
               <TextInput
                 style={styles.input}
                 placeholder="Enter Password"
                 placeholderTextColor="#94A3B8"
                 secureTextEntry
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
+                }}
               />
             </View>
+            {errors.password ? <Text style={styles.errorText}>⚠ {errors.password}</Text> : null}
 
-            <CustomButton
-              title="Sign in"
+            {/* Sign In Button with Loading */}
+            <TouchableOpacity
+              style={[styles.signInButton, loading && styles.signInButtonDisabled]}
               onPress={handleLogin}
-              style={styles.signInButton}
-              textStyle={styles.signInButtonText}
-            />
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading
+                ? <ActivityIndicator color="#FFFFFF" size="small" />
+                : <Text style={styles.signInButtonText}>Sign In</Text>
+              }
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.forgotPassword}>
               <Text style={styles.forgotText}>Forgot your password?</Text>
@@ -161,15 +232,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  signUpText: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  signUpLink: {
-    fontSize: 13,
-    color: '#087E66',
-    fontWeight: '700',
-  },
   form: {
     width: '100%',
   },
@@ -179,32 +241,44 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 14,
     paddingHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 4,
     height: 50,
     justifyContent: 'center',
   },
-  inputLabel: {
-    fontSize: 9,
-    color: '#94A3B8',
-    marginBottom: -5,
+  inputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FFF5F5',
   },
   input: {
     flex: 1,
     height: '100%',
     fontSize: 14,
     color: '#1E293B',
-    paddingVertical: 0, // Let flex and height handle centering
+    paddingVertical: 0,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '500',
+    marginBottom: 10,
+    marginLeft: 4,
   },
   signInButton: {
     backgroundColor: '#1C1C1E',
     borderRadius: 14,
     height: 50,
-    marginTop: 10,
+    marginTop: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 5,
+  },
+  signInButtonDisabled: {
+    backgroundColor: '#94A3B8',
+    elevation: 0,
   },
   signInButtonText: {
     color: '#FFFFFF',
