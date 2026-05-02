@@ -48,12 +48,11 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
   }, [isOpen]);
 
   const menuItems = [
-    { name: 'Dashboard', icon: '📊', route: 'Dashboard' },
-    { name: 'Inventory', icon: '📦', route: 'Inventory' },
-    { name: 'Shops', icon: '🏬', route: 'Shops' },
-    { name: 'Sales', icon: '📈', route: 'Sales' },
-    { name: 'Reports', icon: '📋', route: 'Reports' },
-    { name: 'Reconciliation', icon: '⚖️', route: 'Reconciliation' },
+    { name: 'Dashboard', icon: '⌂', route: 'Dashboard' },
+    { name: 'Inventory', icon: '☷', route: 'Inventory' },
+    { name: 'Shops', icon: '⚲', route: 'Shops' },
+    { name: 'Reports', icon: '◫', route: 'Reports' },
+    { name: 'Sales audit', icon: '◈', route: 'Reconciliation' },
   ];
 
   const handleNavigate = (route) => {
@@ -63,25 +62,30 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     }
   };
 
+  const handleLogout = () => {
+    onClose();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
+  };
+
   return (
     <View style={[styles.overlayContainer, { pointerEvents: isOpen ? 'auto' : 'none' }]}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
-      </TouchableWithoutFeedback>
-      
+      <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+      </Animated.View>
+
       <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
         <View style={styles.sidebarHeader}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoEmoji}>👑</Text>
-          </View>
           <Text style={styles.brandName}>JO GOLD</Text>
           <Text style={styles.userRole}>Welcome, {username || 'Admin'}</Text>
         </View>
 
         <View style={styles.menuContainer}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity 
-              key={index} 
+            <TouchableOpacity
+              key={index}
               style={styles.menuItem}
               onPress={() => handleNavigate(item.route)}
             >
@@ -93,15 +97,17 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
           ))}
         </View>
 
-        <TouchableOpacity 
-          style={styles.logoutBtn} 
-          onPress={() => navigation.navigate('Login')}
-        >
-          <View style={styles.logoutIconContainer}>
-            <Text style={styles.logoutIcon}>🚪</Text>
-          </View>
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </TouchableOpacity>
+        <View style={styles.logoutContainer}>
+          <TouchableOpacity
+            style={styles.logoutBtn}
+            onPress={handleLogout}
+          >
+            <View style={styles.logoutIconContainer}>
+              <Text style={styles.logoutIcon}>⎋</Text>
+            </View>
+            <Text style={styles.logoutText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
     </View>
   );
@@ -132,93 +138,80 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   sidebarHeader: {
-    paddingTop: 60,
-    paddingHorizontal: 25,
-    paddingBottom: 30,
+    paddingTop: 45,
+    paddingHorizontal: 20,
+    paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    alignItems: 'center',
-  },
-  logoContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#FFFBEB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-    borderWidth: 2,
-    borderColor: '#FEF3C7',
-  },
-  logoEmoji: {
-    fontSize: 32,
+    alignItems: 'flex-start',
   },
   brandName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#D4AF37',
-    letterSpacing: 2,
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#087E66',
+    letterSpacing: 1,
   },
   userRole: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748B',
-    marginTop: 6,
-    fontWeight: '500',
+    marginTop: 4,
+    fontWeight: '600',
   },
   menuContainer: {
-    marginTop: 25,
+    marginTop: 10,
     paddingHorizontal: 15,
+    flex: 1,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    marginBottom: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 2,
   },
   menuIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: 10,
   },
   menuIcon: {
-    fontSize: 18,
+    fontSize: 14,
   },
   menuText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1E293B',
   },
+  logoutContainer: {
+    padding: 15,
+    paddingBottom: 20,
+  },
   logoutBtn: {
-    position: 'absolute',
-    bottom: 50,
-    left: 20,
-    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     backgroundColor: '#FFF1F2',
-    borderRadius: 16,
+    borderRadius: 12,
   },
   logoutIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     backgroundColor: '#FFE4E6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 8,
   },
   logoutIcon: {
-    fontSize: 16,
+    fontSize: 14,
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#E11D48',
   },

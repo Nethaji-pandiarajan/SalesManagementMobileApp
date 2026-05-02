@@ -13,17 +13,17 @@ const CustomButton = ({ onPress, title, style, textStyle }) => (
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#2563EB', // Vibrant Blue
+    backgroundColor: '#1C1C1E', // Dark Action Button
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
     marginVertical: 10,
   },
   text: {

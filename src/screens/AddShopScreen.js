@@ -64,7 +64,7 @@ const AddShopScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Initial Balance ($)</Text>
+            <Text style={styles.label}>Initial Balance (₹)</Text>
             <TextInput
               style={styles.input}
               placeholder="0.00"
@@ -157,14 +157,14 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   saveBtn: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 18,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 14,
     height: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 15,
     elevation: 6,
   },

@@ -8,11 +8,9 @@ import InventoryScreen from './src/screens/InventoryScreen';
 import ShopsScreen from './src/screens/ShopsScreen';
 import BillingScreen from './src/screens/BillingScreen';
 import AddShopScreen from './src/screens/AddShopScreen';
-import { 
-  SalesScreen, 
-  ReportsScreen, 
-  ReconciliationScreen 
-} from './src/screens/PlaceholderScreens';
+import ReportsScreen from './src/screens/ReportsScreen';
+import ReconciliationScreen from './src/screens/ReconciliationScreen';
+import { SalesScreen } from './src/screens/PlaceholderScreens';
 
 const Stack = createNativeStackNavigator();
 

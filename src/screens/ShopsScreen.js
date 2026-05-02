@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Sidebar from '../components/Sidebar';
+import BottomNav from '../components/BottomNav';
 
 const { width } = Dimensions.get('window');
 
@@ -57,11 +58,11 @@ const ShopsScreen = ({ navigation, route }) => {
           <Text style={styles.headerTitle}>SHOPS</Text>
         </View>
 
-        <TouchableOpacity 
-          style={styles.addBtn}
+        <TouchableOpacity
+          style={styles.newShopBtn}
           onPress={() => navigation.navigate('AddShop')}
         >
-          <Text style={styles.addBtnText}>+</Text>
+          <Text style={styles.newShopBtnText}>+ New Shop</Text>
         </TouchableOpacity>
       </View>
 
@@ -78,13 +79,10 @@ const ShopsScreen = ({ navigation, route }) => {
           />
         </View>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {filteredShops.map((shop) => (
-            <TouchableOpacity 
-              key={shop.id} 
+            <TouchableOpacity
+              key={shop.id}
               style={styles.shopCard}
               onPress={() => navigation.navigate('Billing', { shop })}
             >
@@ -97,14 +95,7 @@ const ShopsScreen = ({ navigation, route }) => {
                   <Text style={styles.areaName}>📍 {shop.areaName}</Text>
                 </View>
               </View>
-              
-              <View style={styles.balanceInfo}>
-                <Text style={styles.balanceLabel}>Balance</Text>
-                <Text style={[styles.balanceValue, shop.balance > 0 && styles.negativeBalance]}>
-                  ${shop.balance.toLocaleString()}
-                </Text>
-              </View>
-              
+
               <View style={styles.arrowIcon}>
                 <Text style={styles.arrowText}>❯</Text>
               </View>
@@ -119,6 +110,8 @@ const ShopsScreen = ({ navigation, route }) => {
           )}
         </ScrollView>
       </View>
+
+      <BottomNav navigation={navigation} currentRoute="Shops" />
     </SafeAreaView>
   );
 };
@@ -157,7 +150,8 @@ const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginLeft: 15,
   },
   headerTitle: {
     fontSize: 16,
@@ -165,18 +159,20 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     letterSpacing: 1,
   },
-  addBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
+  newShopBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
-  addBtnText: {
-    fontSize: 24,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+  newShopBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
   },
   content: {
     flex: 1,
@@ -186,7 +182,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 14,
     paddingHorizontal: 15,
     height: 56,
     marginBottom: 20,
@@ -203,7 +199,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   shopCard: {
     backgroundColor: '#FFFFFF',
@@ -248,24 +244,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 2,
   },
-  balanceInfo: {
-    alignItems: 'flex-end',
-    marginRight: 15,
-  },
-  balanceLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-  },
-  balanceValue: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#10B981',
-  },
-  negativeBalance: {
-    color: '#EF4444',
-  },
+
   arrowIcon: {
     opacity: 0.2,
   },

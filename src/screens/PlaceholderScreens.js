@@ -19,5 +19,3 @@ const styles = StyleSheet.create({
 });
 
 export const SalesScreen = () => <PlaceholderScreen title="Sales" />;
-export const ReportsScreen = () => <PlaceholderScreen title="Reports" />;
-export const ReconciliationScreen = () => <PlaceholderScreen title="Reconciliation" />;

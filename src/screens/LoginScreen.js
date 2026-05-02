@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   salesManagementTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#3B82F6',
+    color: '#087E66',
     textTransform: 'uppercase',
     letterSpacing: 2,
     marginBottom: 4,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
   signUpLink: {
     fontSize: 13,
-    color: '#3B82F6',
+    color: '#087E66',
     fontWeight: '700',
   },
   form: {
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 30,
+    borderRadius: 14,
     paddingHorizontal: 20,
     marginBottom: 10,
     height: 50,
@@ -196,13 +196,13 @@ const styles = StyleSheet.create({
     paddingVertical: 0, // Let flex and height handle centering
   },
   signInButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 30,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 14,
     height: 50,
     marginTop: 10,
-    shadowColor: '#3B82F6',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 5,
   },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: 13,
-    color: '#3B82F6',
+    color: '#087E66',
     fontWeight: '600',
   },
   divider: {

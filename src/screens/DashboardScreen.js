@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Sidebar from '../components/Sidebar';
+import BottomNav from '../components/BottomNav';
 
 const { width } = Dimensions.get('window');
 
@@ -21,10 +22,10 @@ const DashboardScreen = ({ route, navigation }) => {
 
   // Mock Data
   const stats = [
-    { label: 'Total Stocks', value: '1,250', color: '#FFFFFF', icon: '🏬' },
-    { label: 'Sold Stocks', value: '840', color: '#FFFFFF', icon: '🛒' },
-    { label: 'Total Sales Count', value: '124', color: '#FFFFFF', icon: '🔢' },
-    { label: 'Total Sales', value: '$45,200', color: '#FFFFFF', icon: '🏦' },
+    { label: 'Total Stocks', value: '1,250', color: '#FFFFFF', icon: '⊞' },
+    { label: 'Sold Stocks', value: '840', color: '#FFFFFF', icon: '⇱' },
+    { label: 'Total Sales Count', value: '124', color: '#FFFFFF', icon: '◈' },
+    { label: 'Total Sales', value: '₹45,200', color: '#FFFFFF', icon: '₹' },
   ];
 
   const currentStocks = [
@@ -64,11 +65,12 @@ const DashboardScreen = ({ route, navigation }) => {
         </View>
 
         <TouchableOpacity style={styles.profileBtn}>
-          <Text style={styles.profileIcon}>👤</Text>
+          <Text style={styles.profileIcon}>{username.charAt(0).toUpperCase()}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -137,13 +139,7 @@ const DashboardScreen = ({ route, navigation }) => {
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation Placeholder */}
-      <View style={styles.bottomTab}>
-        <TouchableOpacity style={styles.tabItem}><Text style={styles.tabIcon}>🏠</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}><Text style={styles.tabIcon}>📦</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}><Text style={styles.tabIcon}>🗺️</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}><Text style={styles.tabIcon}>⚙️</Text></TouchableOpacity>
-      </View>
+      <BottomNav navigation={navigation} currentRoute="Dashboard" />
     </SafeAreaView>
   );
 };
@@ -160,7 +156,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#087E66',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -172,41 +168,44 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuIconText: {
     fontSize: 24,
-    color: '#1E293B',
+    color: '#FFFFFF',
   },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginLeft: 15,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#D4AF37',
+    color: '#FFFFFF',
     letterSpacing: 1,
   },
   profileBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: '#3B82F630',
+    borderColor: 'rgba(255,255,255,0.5)',
   },
   profileIcon: {
-    fontSize: 22,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 120,
+    paddingBottom: 20,
   },
   welcomeSection: {
     marginBottom: 25,
@@ -238,7 +237,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    shadowColor: '#3B82F6',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 15,
@@ -259,7 +258,9 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
   },
   cardIcon: {
-    fontSize: 24,
+    fontSize: 22,
+    color: '#087E66',
+    fontWeight: '700',
   },
   statValue: {
     fontSize: 22,
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
   },
   viewAll: {
     fontSize: 14,
-    color: '#3B82F6',
+    color: '#087E66',
     fontWeight: '700',
   },
   summaryCard: {
@@ -360,8 +361,8 @@ const styles = StyleSheet.create({
   areaPerformance: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#3B82F6',
-    backgroundColor: '#EFF6FF',
+    color: '#087E66',
+    backgroundColor: '#E6F2F0',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
@@ -374,40 +375,13 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#087E66',
     borderRadius: 5,
   },
   coverageText: {
     fontSize: 12,
     color: '#94A3B8',
     fontWeight: '600',
-  },
-  bottomTab: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
-    height: 70,
-    backgroundColor: '#1E293B',
-    borderRadius: 35,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.3,
-    shadowRadius: 25,
-    elevation: 15,
-  },
-  tabItem: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tabIcon: {
-    fontSize: 24,
   },
 });
 
