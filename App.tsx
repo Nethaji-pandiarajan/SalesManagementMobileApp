@@ -16,13 +16,18 @@ import ReportsScreen from './src/screens/ReportsScreen';
 import ReconciliationScreen from './src/screens/ReconciliationScreen';
 import {
   SalesScreen,
-  ProductManagementScreen,
   UserManagementScreen,
   SupplyManagementScreen,
   AdminSalesReportsScreen,
   AdminEODScreen,
 } from './src/screens/PlaceholderScreens';
 import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
+import VehicleListScreen from './src/screens/VehicleListScreen';
+import AddVehicleScreen from './src/screens/AddVehicleScreen';
+import CategoryListScreen from './src/screens/CategoryListScreen';
+import AddCategoryScreen from './src/screens/AddCategoryScreen';
+import ProductListScreen from './src/screens/ProductListScreen';
+import AddProductScreen from './src/screens/AddProductScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -58,8 +63,15 @@ function RootNavigator() {
             <Stack.Screen name="Sales" component={SalesScreen} />
             <Stack.Screen name="Reports" component={ReportsScreen} />
             <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
+            <Stack.Screen name="Vehicles" component={VehicleListScreen} />
+            <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
+            {/* Product Management Screens */}
+            <Stack.Screen name="ProductManagement" component={CategoryListScreen} />
+            <Stack.Screen name="AddCategory" component={AddCategoryScreen} />
+            <Stack.Screen name="ProductList" component={ProductListScreen} />
+            <Stack.Screen name="AddProduct" component={AddProductScreen} />
+
             {/* Admin Specific Routes */}
-            <Stack.Screen name="ProductManagement" component={ProductManagementScreen} />
             <Stack.Screen name="UserManagement" component={UserManagementScreen} />
             <Stack.Screen name="SupplyManagement" component={SupplyManagementScreen} />
             <Stack.Screen name="AdminSalesReports" component={AdminSalesReportsScreen} />

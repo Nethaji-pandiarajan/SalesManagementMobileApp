@@ -15,23 +15,21 @@ import BottomNav from '../components/BottomNav';
 
 const { width } = Dimensions.get('window');
 
-const ShopsScreen = ({ navigation, route }) => {
-  const { username } = route.params || { username: 'Admin' };
+const ProductListScreen = ({ navigation, route }) => {
+  const { category, username } = route.params || { category: { categoryName: 'Products' }, username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock Data for Shops
-  const [shops, setShops] = useState([
-    { id: '1', shopName: 'City Supermarket', areaName: 'Downtown', balance: 1200, status: 'Active' },
-    { id: '2', shopName: 'Green Grocers', areaName: 'West Side', balance: 500, status: 'Active' },
-    { id: '3', shopName: 'Morning Mart', areaName: 'North Industrial', balance: 0, status: 'Active' },
-    { id: '4', shopName: 'Quick Stop', areaName: 'East Gate', balance: 2450, status: 'Inactive' },
-    { id: '5', shopName: 'Reliable Stores', areaName: 'Downtown', balance: 300, status: 'Active' },
+  // Mock Data for Products
+  const [products, setProducts] = useState([
+    { productId: '1', sku_code: 'SKU001', productName: 'Apple Juice', unit: 'Liter', rate: 45, status: 'Active' },
+    { productId: '2', sku_code: 'SKU002', productName: 'Orange Juice', unit: 'Liter', rate: 50, status: 'Active' },
+    { productId: '3', sku_code: 'SKU003', productName: 'Water Bottle', unit: '500ml', rate: 20, status: 'Inactive' },
   ]);
 
-  const filteredShops = shops.filter(shop =>
-    shop.shopName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    shop.areaName.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = products.filter(p =>
+    p.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.sku_code.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -47,22 +45,21 @@ const ShopsScreen = ({ navigation, route }) => {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.menuBtn}
-          onPress={() => setIsSidebarOpen(true)}
-        >
-          <Text style={styles.menuIconText}>☰</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <View style={styles.backBtnInner}>
+            <Text style={styles.backBtnText}>←</Text>
+          </View>
         </TouchableOpacity>
 
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>SHOPS</Text>
+          <Text style={styles.headerTitle}>{category.categoryName.toUpperCase()}</Text>
         </View>
 
         <TouchableOpacity
-          style={styles.newShopBtn}
-          onPress={() => navigation.navigate('AddShop')}
+          style={styles.newBtn}
+          onPress={() => navigation.navigate('AddProduct', { categoryId: category.categoryId })}
         >
-          <Text style={styles.newShopBtnText}>+ New Shop</Text>
+          <Text style={styles.newBtnText}>+ New Product</Text>
         </TouchableOpacity>
       </View>
 
@@ -72,7 +69,7 @@ const ShopsScreen = ({ navigation, route }) => {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search shops or areas..."
+            placeholder="Search products..."
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -80,46 +77,42 @@ const ShopsScreen = ({ navigation, route }) => {
         </View>
 
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {filteredShops.map((shop) => (
-            <TouchableOpacity
-              key={shop.id}
-              style={styles.shopCard}
-              onPress={() => navigation.navigate('Billing', { shop })}
-            >
-              <View style={styles.shopInfo}>
-                <View style={styles.shopIconBox}>
-                  <Text style={styles.shopIcon}>🏬</Text>
+          {filteredProducts.map((product) => (
+            <View key={product.productId} style={styles.card}>
+              <View style={styles.cardInfo}>
+                <View style={styles.iconBox}>
+                  <Text style={styles.icon}>📦</Text>
                 </View>
-                <View>
-                  <Text style={styles.shopName}>{shop.shopName}</Text>
-                  <Text style={styles.areaName}>📍 {shop.areaName}</Text>
-                </View>
-              </View>
-
-              <View style={styles.cardRight}>
-                <View style={styles.statusDotContainer}>
-                  <View style={[styles.statusDot, shop.status === 'Active' ? styles.statusActive : styles.statusInactive]} />
-                </View>
-                <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddShop', { shop })}>
-                  <Text style={styles.editIcon}>✎</Text>
-                </TouchableOpacity>
-                <View style={styles.arrowIcon}>
-                  <Text style={styles.arrowText}>❯</Text>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.name}>{product.productName}</Text>
+                    <View style={styles.cardRight}>
+                      <View style={[styles.statusDot, product.status === 'Active' ? styles.statusActive : styles.statusInactive]} />
+                      <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddProduct', { product })}>
+                        <Text style={styles.editIcon}>✎</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <Text style={styles.sku}>SKU: {product.sku_code}</Text>
+                  <View style={styles.priceRow}>
+                    <Text style={styles.unit}>{product.unit}</Text>
+                    <Text style={styles.rate}>₹{product.rate}</Text>
+                  </View>
                 </View>
               </View>
-            </TouchableOpacity>
+            </View>
           ))}
 
-          {filteredShops.length === 0 && (
+          {filteredProducts.length === 0 && (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>🏢</Text>
-              <Text style={styles.emptyText}>No shops found</Text>
+              <Text style={styles.emptyIcon}>📦</Text>
+              <Text style={styles.emptyText}>No products found</Text>
             </View>
           )}
         </ScrollView>
       </View>
 
-      <BottomNav navigation={navigation} currentRoute="Shops" />
+      <BottomNav navigation={navigation} currentRoute="ProductManagement" />
     </SafeAreaView>
   );
 };
@@ -144,17 +137,24 @@ const styles = StyleSheet.create({
     elevation: 3,
     zIndex: 10,
   },
-  menuBtn: {
+  backBtn: {
     width: 44,
     height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backBtnInner: {
+    width: 36,
+    height: 36,
     borderRadius: 12,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  menuIconText: {
-    fontSize: 24,
+  backBtnText: {
+    fontSize: 20,
     color: '#1E293B',
+    fontWeight: 'bold',
   },
   headerTitleContainer: {
     flex: 1,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     letterSpacing: 1,
   },
-  newShopBtn: {
+  newBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
   },
-  newShopBtnText: {
+  newBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1E293B',
@@ -209,14 +209,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  shopCard: {
+  card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#0F172A',
@@ -225,40 +222,27 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
-  shopInfo: {
+  cardInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  shopIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  iconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
-  shopIcon: {
-    fontSize: 20,
+  icon: {
+    fontSize: 24,
   },
-  shopName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  areaName: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
-
-  arrowIcon: {
-    opacity: 0.2,
-  },
-  arrowText: {
-    fontSize: 14,
-    fontWeight: 'bold',
+  nameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flex: 1,
   },
   cardRight: {
     flexDirection: 'row',
@@ -273,22 +257,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginRight: 10,
+    marginLeft: 10,
   },
   editIcon: {
     fontSize: 14,
     color: '#64748B',
   },
-  statusDotContainer: {
-    padding: 6,
-    justifyContent: 'center',
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  sku: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+  },
+  unit: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  rate: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#087E66',
   },
   statusDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: 4,
   },
   statusActive: {
     backgroundColor: '#10B981', // Green
@@ -313,4 +321,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ShopsScreen;
+export default ProductListScreen;

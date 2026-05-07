@@ -15,23 +15,21 @@ import BottomNav from '../components/BottomNav';
 
 const { width } = Dimensions.get('window');
 
-const ShopsScreen = ({ navigation, route }) => {
+const VehicleListScreen = ({ navigation, route }) => {
   const { username } = route.params || { username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock Data for Shops
-  const [shops, setShops] = useState([
-    { id: '1', shopName: 'City Supermarket', areaName: 'Downtown', balance: 1200, status: 'Active' },
-    { id: '2', shopName: 'Green Grocers', areaName: 'West Side', balance: 500, status: 'Active' },
-    { id: '3', shopName: 'Morning Mart', areaName: 'North Industrial', balance: 0, status: 'Active' },
-    { id: '4', shopName: 'Quick Stop', areaName: 'East Gate', balance: 2450, status: 'Inactive' },
-    { id: '5', shopName: 'Reliable Stores', areaName: 'Downtown', balance: 300, status: 'Active' },
+  // Mock Data for Vehicles
+  const [vehicles, setVehicles] = useState([
+    { vehicleId: '1', vehicleNo: 'TN 01 AB 1234', VehicleName: 'Tata Ace', vehicleOwner: 'John Doe', status: 'Active' },
+    { vehicleId: '2', vehicleNo: 'TN 02 XY 5678', VehicleName: 'Mahindra Bolero', vehicleOwner: 'Jane Smith', status: 'Active' },
+    { vehicleId: '3', vehicleNo: 'KL 05 CD 9012', VehicleName: 'Ashok Leyland Dost', vehicleOwner: 'Acme Corp', status: 'Inactive' },
   ]);
 
-  const filteredShops = shops.filter(shop =>
-    shop.shopName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    shop.areaName.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredVehicles = vehicles.filter(v =>
+    v.VehicleName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    v.vehicleNo.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -55,14 +53,14 @@ const ShopsScreen = ({ navigation, route }) => {
         </TouchableOpacity>
 
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>SHOPS</Text>
+          <Text style={styles.headerTitle}>VEHICLES</Text>
         </View>
 
         <TouchableOpacity
-          style={styles.newShopBtn}
-          onPress={() => navigation.navigate('AddShop')}
+          style={styles.newVehicleBtn}
+          onPress={() => navigation.navigate('AddVehicle')}
         >
-          <Text style={styles.newShopBtnText}>+ New Shop</Text>
+          <Text style={styles.newVehicleBtnText}>+ New Vehicle</Text>
         </TouchableOpacity>
       </View>
 
@@ -72,7 +70,7 @@ const ShopsScreen = ({ navigation, route }) => {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search shops or areas..."
+            placeholder="Search by name or number..."
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -80,46 +78,43 @@ const ShopsScreen = ({ navigation, route }) => {
         </View>
 
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {filteredShops.map((shop) => (
+          {filteredVehicles.map((vehicle) => (
             <TouchableOpacity
-              key={shop.id}
-              style={styles.shopCard}
-              onPress={() => navigation.navigate('Billing', { shop })}
+              key={vehicle.vehicleId}
+              style={styles.vehicleCard}
+              onPress={() => {}} // Navigation to Vehicle details if needed
             >
-              <View style={styles.shopInfo}>
-                <View style={styles.shopIconBox}>
-                  <Text style={styles.shopIcon}>🏬</Text>
+              <View style={styles.vehicleInfo}>
+                <View style={styles.vehicleIconBox}>
+                  <Text style={styles.vehicleIcon}>🚚</Text>
                 </View>
                 <View>
-                  <Text style={styles.shopName}>{shop.shopName}</Text>
-                  <Text style={styles.areaName}>📍 {shop.areaName}</Text>
+                  <Text style={styles.vehicleName}>{vehicle.VehicleName}</Text>
+                  <Text style={styles.vehicleNo}>Number: {vehicle.vehicleNo}</Text>
                 </View>
               </View>
-
+              
               <View style={styles.cardRight}>
                 <View style={styles.statusDotContainer}>
-                  <View style={[styles.statusDot, shop.status === 'Active' ? styles.statusActive : styles.statusInactive]} />
+                  <View style={[styles.statusDot, vehicle.status === 'Active' ? styles.statusActive : styles.statusInactive]} />
                 </View>
-                <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddShop', { shop })}>
+                <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddVehicle', { vehicle })}>
                   <Text style={styles.editIcon}>✎</Text>
                 </TouchableOpacity>
-                <View style={styles.arrowIcon}>
-                  <Text style={styles.arrowText}>❯</Text>
-                </View>
               </View>
             </TouchableOpacity>
           ))}
 
-          {filteredShops.length === 0 && (
+          {filteredVehicles.length === 0 && (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>🏢</Text>
-              <Text style={styles.emptyText}>No shops found</Text>
+              <Text style={styles.emptyIcon}>🚚</Text>
+              <Text style={styles.emptyText}>No vehicles found</Text>
             </View>
           )}
         </ScrollView>
       </View>
 
-      <BottomNav navigation={navigation} currentRoute="Shops" />
+      <BottomNav navigation={navigation} currentRoute="Vehicles" />
     </SafeAreaView>
   );
 };
@@ -167,7 +162,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     letterSpacing: 1,
   },
-  newShopBtn: {
+  newVehicleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
@@ -177,7 +172,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
   },
-  newShopBtnText: {
+  newVehicleBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1E293B',
@@ -209,7 +204,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  shopCard: {
+  vehicleCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
@@ -225,12 +220,12 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
-  shopInfo: {
+  vehicleInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  shopIconBox: {
+  vehicleIconBox: {
     width: 44,
     height: 44,
     borderRadius: 12,
@@ -239,45 +234,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  shopIcon: {
+  vehicleIcon: {
     fontSize: 20,
   },
-  shopName: {
+  vehicleName: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1E293B',
   },
-  areaName: {
+  vehicleNo: {
     fontSize: 12,
     color: '#64748B',
     marginTop: 2,
-  },
-
-  arrowIcon: {
-    opacity: 0.2,
-  },
-  arrowText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  cardRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  editBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginRight: 10,
-  },
-  editIcon: {
-    fontSize: 14,
-    color: '#64748B',
+    lineHeight: 16,
   },
   statusDotContainer: {
     padding: 6,
@@ -288,13 +257,31 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: 4,
   },
   statusActive: {
     backgroundColor: '#10B981', // Green
   },
   statusInactive: {
     backgroundColor: '#EF4444', // Red
+  },
+  cardRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 60,
+  },
+  editBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  editIcon: {
+    fontSize: 14,
+    color: '#64748B',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -313,4 +300,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ShopsScreen;
+export default VehicleListScreen;

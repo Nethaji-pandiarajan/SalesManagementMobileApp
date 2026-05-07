@@ -11,18 +11,41 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const AddShopScreen = ({ navigation }) => {
-  const [shopName, setShopName] = useState('');
-  const [areaName, setAreaName] = useState('');
-  const [initialBalance, setInitialBalance] = useState('');
+const AddProductScreen = ({ navigation, route }) => {
+  const { categoryId } = route.params || { categoryId: 'default' };
+  
+  const [productName, setProductName] = useState('');
+  const [skuCode, setSkuCode] = useState('');
+  const [description, setDescription] = useState('');
+  const [unit, setUnit] = useState('');
+  const [rate, setRate] = useState('');
   const [status, setStatus] = useState('Active');
 
   const handleSave = () => {
-    if (!shopName || !areaName) {
-      Alert.alert('Error', 'Please fill in shop name and area.');
+    if (!productName || !skuCode || !rate) {
+      Alert.alert('Error', 'Please fill in Name, SKU, and Rate.');
       return;
     }
-    Alert.alert('Success', 'Shop added successfully!', [
+
+    const newProductData = {
+      productId: Math.random().toString(36).substr(2, 9),
+      sku_code: skuCode,
+      productName,
+      description,
+      categoryId,
+      unit,
+      rate: parseFloat(rate),
+      status,
+      createdOn: new Date().toISOString(),
+      updatedOn: new Date().toISOString(),
+      createdBy: 'currentUser',
+      updatedBy: 'currentUser',
+      orgId: 'org123',
+    };
+
+    console.log('Saving new product:', newProductData);
+
+    Alert.alert('Success', 'Product added successfully!', [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
   };
@@ -39,43 +62,64 @@ const AddShopScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>ADD NEW SHOP</Text>
+          <Text style={styles.headerTitle}>ADD NEW PRODUCT</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.formCard}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Shop Name</Text>
+            <Text style={styles.label}>Product Name</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. City Supermarket"
-              value={shopName}
-              onChangeText={setShopName}
+              placeholder="e.g. Apple Juice"
+              value={productName}
+              onChangeText={setProductName}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Area Name</Text>
+            <Text style={styles.label}>SKU Code</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Downtown"
-              value={areaName}
-              onChangeText={setAreaName}
+              placeholder="e.g. BEV-001"
+              value={skuCode}
+              onChangeText={setSkuCode}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Initial Balance (₹)</Text>
+            <Text style={styles.label}>Unit</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Liter, Kg, Piece"
+              value={unit}
+              onChangeText={setUnit}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Rate (₹)</Text>
             <TextInput
               style={styles.input}
               placeholder="0.00"
               keyboardType="numeric"
-              value={initialBalance}
-              onChangeText={setInitialBalance}
+              value={rate}
+              onChangeText={setRate}
             />
           </View>
 
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+              placeholder="Product details..."
+              value={description}
+              onChangeText={setDescription}
+              multiline={true}
+            />
+          </View>
+          
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Status</Text>
             <View style={styles.statusToggleContainer}>
@@ -102,7 +146,7 @@ const AddShopScreen = ({ navigation }) => {
         </View>
 
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Save Shop</Text>
+          <Text style={styles.saveBtnText}>Save Product</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -248,4 +292,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddShopScreen;
+export default AddProductScreen;

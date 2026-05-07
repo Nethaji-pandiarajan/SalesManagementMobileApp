@@ -58,6 +58,7 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     { name: 'Supply Management', icon: '🚚', route: 'SupplyManagement' },
     { name: 'Sales Reports', icon: '📊', route: 'AdminSalesReports' },
     { name: 'EOD Reconciliation', icon: '💰', route: 'AdminEOD' },
+    { name: 'Vehicles', icon: '🚚', route: 'Vehicles' },
   ];
 
   const executiveMenuItems = [
@@ -66,6 +67,7 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     { name: 'Shops', icon: '⚲', route: 'Shops' },
     { name: 'Reports', icon: '◫', route: 'Reports' },
     { name: 'Sales audit', icon: '◈', route: 'Reconciliation' },
+    { name: 'Vehicles', icon: '🚚', route: 'Vehicles' },
   ];
 
   const menuItems = isAdmin ? adminMenuItems : executiveMenuItems;

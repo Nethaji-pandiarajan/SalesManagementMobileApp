@@ -142,7 +142,6 @@ const AdminDashboardScreen = ({ navigation }) => {
                   <Text style={styles.vehicleName}>{vehicle.name}</Text>
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(vehicle.status) + '20' }]}>
                     <View style={[styles.statusDot, { backgroundColor: getStatusColor(vehicle.status) }]} />
-                    <Text style={[styles.statusText, { color: getStatusColor(vehicle.status) }]}>{vehicle.status}</Text>
                   </View>
                 </View>
                 <Text style={styles.driverName}>Driver: {vehicle.driver}</Text>

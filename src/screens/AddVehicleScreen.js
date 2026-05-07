@@ -11,18 +11,37 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const AddShopScreen = ({ navigation }) => {
-  const [shopName, setShopName] = useState('');
-  const [areaName, setAreaName] = useState('');
-  const [initialBalance, setInitialBalance] = useState('');
-  const [status, setStatus] = useState('Active');
+const AddVehicleScreen = ({ navigation }) => {
+  const [vehicleNo, setVehicleNo] = useState('');
+  const [vehicleName, setVehicleName] = useState('');
+  const [vehicleOwner, setVehicleOwner] = useState('');
+  const [description, setDescription] = useState('');
+  const [status, setStatus] = useState('Active'); // Active or Inactive
 
   const handleSave = () => {
-    if (!shopName || !areaName) {
-      Alert.alert('Error', 'Please fill in shop name and area.');
+    if (!vehicleNo || !vehicleName) {
+      Alert.alert('Error', 'Please fill in vehicle number and name.');
       return;
     }
-    Alert.alert('Success', 'Shop added successfully!', [
+
+    // Prepare data to save, including mock system fields
+    const newVehicleData = {
+      vehicleId: Math.random().toString(36).substr(2, 9),
+      vehicleNo,
+      VehicleName: vehicleName,
+      vehicleOwner,
+      description,
+      status,
+      createdOn: new Date().toISOString(),
+      updatedOn: new Date().toISOString(),
+      createdBy: 'currentUser', // Mocked user ID
+      updatedBy: 'currentUser',
+      orgId: 'org123', // Mocked Org ID
+    };
+
+    console.log('Saving new vehicle:', newVehicleData);
+
+    Alert.alert('Success', 'Vehicle added successfully!', [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
   };
@@ -39,43 +58,53 @@ const AddShopScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>ADD NEW SHOP</Text>
+          <Text style={styles.headerTitle}>ADD NEW VEHICLE</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.formCard}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Shop Name</Text>
+            <Text style={styles.label}>Vehicle Number</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. City Supermarket"
-              value={shopName}
-              onChangeText={setShopName}
+              placeholder="e.g. TN 01 AB 1234"
+              value={vehicleNo}
+              onChangeText={setVehicleNo}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Area Name</Text>
+            <Text style={styles.label}>Vehicle Name / Model</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Downtown"
-              value={areaName}
-              onChangeText={setAreaName}
+              placeholder="e.g. Tata Ace"
+              value={vehicleName}
+              onChangeText={setVehicleName}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Initial Balance (₹)</Text>
+            <Text style={styles.label}>Vehicle Owner</Text>
             <TextInput
               style={styles.input}
-              placeholder="0.00"
-              keyboardType="numeric"
-              value={initialBalance}
-              onChangeText={setInitialBalance}
+              placeholder="e.g. John Doe"
+              value={vehicleOwner}
+              onChangeText={setVehicleOwner}
             />
           </View>
 
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+              placeholder="Additional details..."
+              value={description}
+              onChangeText={setDescription}
+              multiline={true}
+            />
+          </View>
+          
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Status</Text>
             <View style={styles.statusToggleContainer}>
@@ -102,7 +131,7 @@ const AddShopScreen = ({ navigation }) => {
         </View>
 
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Save Shop</Text>
+          <Text style={styles.saveBtnText}>Save Vehicle</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -206,10 +235,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   statusBtnActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#10B981', // Green
   },
   statusBtnInactive: {
-    backgroundColor: '#EF4444',
+    backgroundColor: '#EF4444', // Red
   },
   statusBtnText: {
     fontSize: 14,
@@ -248,4 +277,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddShopScreen;
+export default AddVehicleScreen;

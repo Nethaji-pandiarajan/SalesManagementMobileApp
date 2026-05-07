@@ -15,23 +15,21 @@ import BottomNav from '../components/BottomNav';
 
 const { width } = Dimensions.get('window');
 
-const ShopsScreen = ({ navigation, route }) => {
+const CategoryListScreen = ({ navigation, route }) => {
   const { username } = route.params || { username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock Data for Shops
-  const [shops, setShops] = useState([
-    { id: '1', shopName: 'City Supermarket', areaName: 'Downtown', balance: 1200, status: 'Active' },
-    { id: '2', shopName: 'Green Grocers', areaName: 'West Side', balance: 500, status: 'Active' },
-    { id: '3', shopName: 'Morning Mart', areaName: 'North Industrial', balance: 0, status: 'Active' },
-    { id: '4', shopName: 'Quick Stop', areaName: 'East Gate', balance: 2450, status: 'Inactive' },
-    { id: '5', shopName: 'Reliable Stores', areaName: 'Downtown', balance: 300, status: 'Active' },
+  // Mock Data for Categories
+  const [categories, setCategories] = useState([
+    { categoryId: '1', categoryName: 'Beverages', description: 'Soft drinks, juices, and water', status: 'Active' },
+    { categoryId: '2', categoryName: 'Snacks', description: 'Chips, biscuits, and nuts', status: 'Active' },
+    { categoryId: '3', categoryName: 'Dairy', description: 'Milk, cheese, and yogurt', status: 'Active' },
+    { categoryId: '4', categoryName: 'Produce', description: 'Fresh fruits and vegetables', status: 'Inactive' },
   ]);
 
-  const filteredShops = shops.filter(shop =>
-    shop.shopName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    shop.areaName.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCategories = categories.filter(c =>
+    c.categoryName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -55,14 +53,14 @@ const ShopsScreen = ({ navigation, route }) => {
         </TouchableOpacity>
 
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>SHOPS</Text>
+          <Text style={styles.headerTitle}>CATEGORIES</Text>
         </View>
 
         <TouchableOpacity
-          style={styles.newShopBtn}
-          onPress={() => navigation.navigate('AddShop')}
+          style={styles.newBtn}
+          onPress={() => navigation.navigate('AddCategory')}
         >
-          <Text style={styles.newShopBtnText}>+ New Shop</Text>
+          <Text style={styles.newBtnText}>+ New Category</Text>
         </TouchableOpacity>
       </View>
 
@@ -72,7 +70,7 @@ const ShopsScreen = ({ navigation, route }) => {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search shops or areas..."
+            placeholder="Search categories..."
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -80,27 +78,27 @@ const ShopsScreen = ({ navigation, route }) => {
         </View>
 
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {filteredShops.map((shop) => (
+          {filteredCategories.map((category) => (
             <TouchableOpacity
-              key={shop.id}
-              style={styles.shopCard}
-              onPress={() => navigation.navigate('Billing', { shop })}
+              key={category.categoryId}
+              style={styles.card}
+              onPress={() => navigation.navigate('ProductList', { category })}
             >
-              <View style={styles.shopInfo}>
-                <View style={styles.shopIconBox}>
-                  <Text style={styles.shopIcon}>🏬</Text>
+              <View style={styles.cardInfo}>
+                <View style={styles.iconBox}>
+                  <Text style={styles.icon}>📁</Text>
                 </View>
-                <View>
-                  <Text style={styles.shopName}>{shop.shopName}</Text>
-                  <Text style={styles.areaName}>📍 {shop.areaName}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name}>{category.categoryName}</Text>
+                  <Text style={styles.description} numberOfLines={1}>{category.description}</Text>
                 </View>
               </View>
-
+              
               <View style={styles.cardRight}>
                 <View style={styles.statusDotContainer}>
-                  <View style={[styles.statusDot, shop.status === 'Active' ? styles.statusActive : styles.statusInactive]} />
+                  <View style={[styles.statusDot, category.status === 'Active' ? styles.statusActive : styles.statusInactive]} />
                 </View>
-                <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddShop', { shop })}>
+                <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddCategory', { category })}>
                   <Text style={styles.editIcon}>✎</Text>
                 </TouchableOpacity>
                 <View style={styles.arrowIcon}>
@@ -110,16 +108,16 @@ const ShopsScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           ))}
 
-          {filteredShops.length === 0 && (
+          {filteredCategories.length === 0 && (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>🏢</Text>
-              <Text style={styles.emptyText}>No shops found</Text>
+              <Text style={styles.emptyIcon}>📁</Text>
+              <Text style={styles.emptyText}>No categories found</Text>
             </View>
           )}
         </ScrollView>
       </View>
 
-      <BottomNav navigation={navigation} currentRoute="Shops" />
+      <BottomNav navigation={navigation} currentRoute="ProductManagement" />
     </SafeAreaView>
   );
 };
@@ -167,7 +165,7 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     letterSpacing: 1,
   },
-  newShopBtn: {
+  newBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
@@ -177,7 +175,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
   },
-  newShopBtnText: {
+  newBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1E293B',
@@ -209,7 +207,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  shopCard: {
+  card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
@@ -225,12 +223,12 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
-  shopInfo: {
+  cardInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  shopIconBox: {
+  iconBox: {
     width: 44,
     height: 44,
     borderRadius: 12,
@@ -239,22 +237,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  shopIcon: {
+  icon: {
     fontSize: 20,
   },
-  shopName: {
+  name: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1E293B',
   },
-  areaName: {
+  description: {
     fontSize: 12,
     color: '#64748B',
     marginTop: 2,
+    lineHeight: 16,
   },
-
   arrowIcon: {
     opacity: 0.2,
+    marginLeft: 10,
   },
   arrowText: {
     fontSize: 14,
@@ -313,4 +312,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ShopsScreen;
+export default CategoryListScreen;

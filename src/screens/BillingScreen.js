@@ -128,7 +128,9 @@ const BillingScreen = ({ navigation, route }) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>‹</Text>
+          <View style={styles.backBtnInner}>
+            <Text style={styles.backBtnText}>←</Text>
+          </View>
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>BILLING</Text>
@@ -355,13 +357,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
   },
   backBtn: {
-    width: 36, height: 36,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backBtnInner: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backBtnText: { fontSize: 20, color: '#1E293B', fontWeight: '700', lineHeight: 22 },
+  backBtnText: {
+    fontSize: 20,
+    color: '#1E293B',
+    fontWeight: 'bold',
+  },
   headerTitleContainer: { flex: 1, alignItems: 'flex-start', marginLeft: 12 },
   headerTitle: { fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 2 },
   shopNameHeader: { fontSize: 15, fontWeight: '800', color: '#1E293B' },
