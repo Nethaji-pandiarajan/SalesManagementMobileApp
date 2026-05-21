@@ -129,7 +129,7 @@ const BillingScreen = ({ navigation, route }) => {
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <View style={styles.backBtnInner}>
-            <Text style={styles.backBtnText}>←</Text>
+            <Text style={styles.backBtnText}>❮</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
@@ -352,35 +352,36 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: StatusBar.currentHeight + 10 || 50,
+    paddingHorizontal: 16, paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15, backgroundColor: '#FFFFFF',
     borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
   },
   backBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backBtnInner: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   backBtnText: {
-    fontSize: 20,
+    fontSize: 16,
     color: '#1E293B',
     fontWeight: 'bold',
+    marginRight: 2,
   },
   headerTitleContainer: { flex: 1, alignItems: 'flex-start', marginLeft: 12 },
   headerTitle: { fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 2 },
   shopNameHeader: { fontSize: 15, fontWeight: '800', color: '#1E293B' },
-  headerRight: { width: 36 },
+  headerRight: { width: 38 },
   mainArea: { flex: 1 },
-  mainContent: { padding: 20, paddingBottom: 120 },
+  mainContent: { padding: 16, paddingBottom: 120 },
   billDetailsSection: {},
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B' },

@@ -12,14 +12,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const AddProductScreen = ({ navigation, route }) => {
-  const { categoryId } = route.params || { categoryId: 'default' };
+  const { categoryId, product } = route.params || {};
   
-  const [productName, setProductName] = useState('');
-  const [skuCode, setSkuCode] = useState('');
-  const [description, setDescription] = useState('');
-  const [unit, setUnit] = useState('');
-  const [rate, setRate] = useState('');
-  const [status, setStatus] = useState('Active');
+  const [productName, setProductName] = useState(product ? product.productName : '');
+  const [skuCode, setSkuCode] = useState(product ? product.sku_code : '');
+  const [description, setDescription] = useState(product ? product.description : '');
+  const [unit, setUnit] = useState(product ? product.unit : '');
+  const [rate, setRate] = useState(product ? product.rate.toString() : '');
+  const [status, setStatus] = useState(product ? product.status : 'Active');
 
   const handleSave = () => {
     if (!productName || !skuCode || !rate) {
@@ -27,27 +27,34 @@ const AddProductScreen = ({ navigation, route }) => {
       return;
     }
 
-    const newProductData = {
-      productId: Math.random().toString(36).substr(2, 9),
-      sku_code: skuCode,
-      productName,
-      description,
-      categoryId,
-      unit,
-      rate: parseFloat(rate),
-      status,
-      createdOn: new Date().toISOString(),
-      updatedOn: new Date().toISOString(),
-      createdBy: 'currentUser',
-      updatedBy: 'currentUser',
-      orgId: 'org123',
-    };
+    if (product) {
+      console.log('Updating product:', { ...product, productName, sku_code: skuCode, description, unit, rate: parseFloat(rate), status });
+      Alert.alert('Success', 'Product updated successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } else {
+      const newProductData = {
+        productId: Math.random().toString(36).substr(2, 9),
+        sku_code: skuCode,
+        productName,
+        description,
+        categoryId,
+        unit,
+        rate: parseFloat(rate),
+        status,
+        createdOn: new Date().toISOString(),
+        updatedOn: new Date().toISOString(),
+        createdBy: 'currentUser',
+        updatedBy: 'currentUser',
+        orgId: 'org123',
+      };
 
-    console.log('Saving new product:', newProductData);
+      console.log('Saving new product:', newProductData);
 
-    Alert.alert('Success', 'Product added successfully!', [
-      { text: 'OK', onPress: () => navigation.goBack() }
-    ]);
+      Alert.alert('Success', 'Product added successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    }
   };
 
   return (
@@ -58,11 +65,11 @@ const AddProductScreen = ({ navigation, route }) => {
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <View style={styles.backBtnInner}>
-            <Text style={styles.backBtnText}>←</Text>
+            <Text style={styles.backBtnText}>❮</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>ADD NEW PRODUCT</Text>
+          <Text style={styles.headerTitle}>{product ? 'EDIT PRODUCT' : 'ADD NEW PRODUCT'}</Text>
         </View>
       </View>
 
@@ -162,31 +169,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#087E66',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 10,
   },
   backBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backBtnInner: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   backBtnText: {
-    fontSize: 20,
-    color: '#1E293B',
+    fontSize: 16,
+    color: '#FFFFFF',
     fontWeight: 'bold',
+    marginRight: 2,
   },
   headerTitleContainer: {
     flex: 1,
@@ -196,25 +208,22 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#FFFFFF',
     letterSpacing: 1,
   },
-  headerRight: {
-    width: 44,
-  },
   content: {
-    padding: 20,
+    padding: 16,
   },
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    padding: 25,
+    padding: 24,
     marginBottom: 30,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 20,
     elevation: 4,
   },
@@ -229,25 +238,26 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    height: 50,
-    paddingHorizontal: 15,
-    fontSize: 16,
+    borderRadius: 14,
+    height: 52,
+    paddingHorizontal: 16,
+    fontSize: 15,
     color: '#1E293B',
+    fontWeight: '500',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   statusToggleContainer: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 4,
   },
   statusBtn: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
   },
   statusBtnActive: {
     backgroundColor: '#10B981',
@@ -274,16 +284,16 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   saveBtn: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 14,
-    height: 60,
+    backgroundColor: '#087E66',
+    borderRadius: 16,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    elevation: 6,
+    shadowColor: '#087E66',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
   },
   saveBtnText: {
     fontSize: 16,

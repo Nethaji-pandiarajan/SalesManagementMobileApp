@@ -15,17 +15,52 @@ import BottomNav from '../components/BottomNav';
 
 const { width } = Dimensions.get('window');
 
+const categoryProducts = {
+  'Jo gold chekku gingelly oil': [
+    { productId: 'JG-G-1L-B', sku_code: 'JG-G-1L-B', productName: '1 ltr bottle', unit: 'Liter', rate: 180, status: 'Active' },
+    { productId: 'JG-G-500-B', sku_code: 'JG-G-500-B', productName: '500 ml bottle', unit: '500ml', rate: 95, status: 'Active' },
+    { productId: 'JG-G-200-B', sku_code: 'JG-G-200-B', productName: '200 ml bottle', unit: '200ml', rate: 40, status: 'Active' },
+    { productId: 'JG-G-100-B', sku_code: 'JG-G-100-B', productName: '100 ml bottle', unit: '100ml', rate: 22, status: 'Active' },
+    { productId: 'JG-G-1L-P', sku_code: 'JG-G-1L-P', productName: '1 ltr pouch', unit: 'Liter', rate: 175, status: 'Active' },
+    { productId: 'JG-G-500-P', sku_code: 'JG-G-500-P', productName: '500 ml pouch', unit: '500ml', rate: 90, status: 'Active' },
+    { productId: 'JG-G-100-P', sku_code: 'JG-G-100-P', productName: '100 ml pouch', unit: '100ml', rate: 20, status: 'Active' },
+    { productId: 'JG-G-50-P', sku_code: 'JG-G-50-P', productName: '50 ml pouch', unit: '50ml', rate: 12, status: 'Active' },
+    { productId: 'JG-G-5L-C', sku_code: 'JG-G-5L-C', productName: '5 ltr can', unit: '5 Liters', rate: 850, status: 'Active' },
+    { productId: 'JG-G-15K-T', sku_code: 'JG-G-15K-T', productName: '15 kg Tin', unit: '15 kg', rate: 2500, status: 'Active' },
+    { productId: 'JG-G-40K-OC', sku_code: 'JG-G-40K-OC', productName: '40 kg oil cake', unit: '40 kg', rate: 1200, status: 'Active' },
+    { productId: 'JG-G-50K-OC', sku_code: 'JG-G-50K-OC', productName: '50 kg oil cake', unit: '50 kg', rate: 1500, status: 'Active' },
+    { productId: 'JG-G-40K-GOC', sku_code: 'JG-G-40K-GOC', productName: '40 kg grinded oil cake', unit: '40 kg', rate: 1300, status: 'Active' },
+    { productId: 'JG-G-50K-GOC', sku_code: 'JG-G-50K-GOC', productName: '50 kg grinded oil cake', unit: '50 kg', rate: 1600, status: 'Active' },
+  ],
+  'Sri Lakshmi chekku gingelly oil': [
+    { productId: 'SL-G-1L-B', sku_code: 'SL-G-1L-B', productName: '1 ltr bottle', unit: 'Liter', rate: 170, status: 'Active' },
+    { productId: 'SL-G-500-B', sku_code: 'SL-G-500-B', productName: '500 ml bottle', unit: '500ml', rate: 85, status: 'Active' },
+    { productId: 'SL-G-5L-C', sku_code: 'SL-G-5L-C', productName: '5 ltr can', unit: '5 Liters', rate: 800, status: 'Active' },
+    { productId: 'SL-G-15K-T', sku_code: 'SL-G-15K-T', productName: '15 kg Tin', unit: '15 kg', rate: 2400, status: 'Active' },
+  ],
+  'Jo gold chekku groundnut oil': [
+    { productId: 'JG-GN-1L-B', sku_code: 'JG-GN-1L-B', productName: '1 ltr bottle', unit: 'Liter', rate: 160, status: 'Active' },
+    { productId: 'JG-GN-500-B', sku_code: 'JG-GN-500-B', productName: '500 ml bottle', unit: '500ml', rate: 85, status: 'Active' },
+    { productId: 'JG-GN-5L-C', sku_code: 'JG-GN-5L-C', productName: '5 ltr can', unit: '5 Liters', rate: 780, status: 'Active' },
+    { productId: 'JG-GN-15K-T', sku_code: 'JG-GN-15K-T', productName: '15 kg Tin', unit: '15 kg', rate: 2300, status: 'Active' },
+    { productId: 'JG-GN-50K-OC', sku_code: 'JG-GN-50K-OC', productName: '50 kg oil cake', unit: '50 kg', rate: 1400, status: 'Active' },
+  ],
+  'Maha gold deepam oil': [
+    { productId: 'MG-D-1L-B', sku_code: 'MG-D-1L-B', productName: '1 ltr bottle', unit: 'Liter', rate: 120, status: 'Active' },
+    { productId: 'MG-D-500-B', sku_code: 'MG-D-500-B', productName: '500 ml bottle', unit: '500ml', rate: 65, status: 'Active' },
+    { productId: 'MG-D-200-B', sku_code: 'MG-D-200-B', productName: '200 ml bottle', unit: '200ml', rate: 30, status: 'Active' },
+    { productId: 'MG-D-100-B', sku_code: 'MG-D-100-B', productName: '100 ml bottle', unit: '100ml', rate: 18, status: 'Active' },
+    { productId: 'MG-D-15K-T', sku_code: 'MG-D-15K-T', productName: '15 kg Tin', unit: '15 kg', rate: 1800, status: 'Active' },
+  ],
+};
+
 const ProductListScreen = ({ navigation, route }) => {
   const { category, username } = route.params || { category: { categoryName: 'Products' }, username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock Data for Products
-  const [products, setProducts] = useState([
-    { productId: '1', sku_code: 'SKU001', productName: 'Apple Juice', unit: 'Liter', rate: 45, status: 'Active' },
-    { productId: '2', sku_code: 'SKU002', productName: 'Orange Juice', unit: 'Liter', rate: 50, status: 'Active' },
-    { productId: '3', sku_code: 'SKU003', productName: 'Water Bottle', unit: '500ml', rate: 20, status: 'Inactive' },
-  ]);
+  // Initial products from dictionary
+  const [products, setProducts] = useState(categoryProducts[category.categoryName] || []);
 
   const filteredProducts = products.filter(p =>
     p.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -47,7 +82,7 @@ const ProductListScreen = ({ navigation, route }) => {
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <View style={styles.backBtnInner}>
-            <Text style={styles.backBtnText}>←</Text>
+            <Text style={styles.backBtnText}>❮</Text>
           </View>
         </TouchableOpacity>
 
@@ -79,26 +114,25 @@ const ProductListScreen = ({ navigation, route }) => {
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {filteredProducts.map((product) => (
             <View key={product.productId} style={styles.card}>
-              <View style={styles.cardInfo}>
-                <View style={styles.iconBox}>
-                  <Text style={styles.icon}>📦</Text>
+              <View style={styles.cardLeft}>
+                <View style={styles.productIconContainer}>
+                  <Text style={styles.productIcon}>💧</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.name}>{product.productName}</Text>
-                    <View style={styles.cardRight}>
-                      <View style={[styles.statusDot, product.status === 'Active' ? styles.statusActive : styles.statusInactive]} />
-                      <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddProduct', { product })}>
-                        <Text style={styles.editIcon}>✎</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <Text style={styles.sku}>SKU: {product.sku_code}</Text>
-                  <View style={styles.priceRow}>
-                    <Text style={styles.unit}>{product.unit}</Text>
-                    <Text style={styles.rate}>₹{product.rate}</Text>
-                  </View>
+                <Text style={styles.name} numberOfLines={2}>{product.productName}</Text>
+              </View>
+
+              <View style={styles.cardRight}>
+                <View style={styles.priceInfo}>
+                  <Text style={styles.rate}>₹{product.rate}</Text>
+                  <Text style={styles.unit}>/ {product.unit}</Text>
                 </View>
+                <View style={[styles.statusDot, product.status === 'Active' ? styles.statusActiveDot : styles.statusInactiveDot]} />
+                <TouchableOpacity
+                  style={styles.actionEditBtn}
+                  onPress={() => navigation.navigate('AddProduct', { product })}
+                >
+                  <Text style={styles.actionEditIcon}>✎</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ))}
@@ -126,85 +160,89 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#087E66',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 4,
     zIndex: 10,
   },
   backBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backBtnInner: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   backBtnText: {
-    fontSize: 20,
-    color: '#1E293B',
+    fontSize: 16,
+    color: '#FFFFFF',
     fontWeight: 'bold',
+    marginRight: 2,
   },
   headerTitleContainer: {
     flex: 1,
     alignItems: 'flex-start',
-    marginLeft: 15,
+    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#FFFFFF',
     letterSpacing: 1,
   },
   newBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   newBtnText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: '800',
+    color: '#087E66',
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: 16,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F5F9',
     borderRadius: 14,
-    paddingHorizontal: 15,
-    height: 56,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    height: 48,
+    marginBottom: 16,
   },
   searchIcon: {
-    fontSize: 18,
+    fontSize: 16,
     marginRight: 10,
+    color: '#64748B',
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     color: '#1E293B',
+    fontWeight: '500',
   },
   scrollContent: {
     paddingBottom: 20,
@@ -214,95 +252,93 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  cardInfo: {
+  cardLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  icon: {
-    fontSize: 24,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     flex: 1,
+    marginRight: 10,
+  },
+  productIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  productIcon: {
+    fontSize: 16,
+  },
+  productMeta: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1E293B',
+    flex: 1,
+  },
+  sku: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginTop: 2,
   },
   cardRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  editBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginLeft: 10,
-  },
-  editIcon: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  sku: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-    lineHeight: 16,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F8FAFC',
+  priceInfo: {
+    alignItems: 'flex-end',
   },
   unit: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '500',
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginTop: 1,
   },
   rate: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     color: '#087E66',
   },
   statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  statusActive: {
-    backgroundColor: '#10B981', // Green
+  statusActiveDot: {
+    backgroundColor: '#10B981',
   },
-  statusInactive: {
-    backgroundColor: '#EF4444', // Red
+  statusInactiveDot: {
+    backgroundColor: '#EF4444',
+  },
+  actionEditBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionEditIcon: {
+    fontSize: 14,
+    color: '#64748B',
   },
   emptyContainer: {
     alignItems: 'center',

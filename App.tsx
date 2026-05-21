@@ -16,11 +16,10 @@ import ReportsScreen from './src/screens/ReportsScreen';
 import ReconciliationScreen from './src/screens/ReconciliationScreen';
 import {
   SalesScreen,
-  UserManagementScreen,
-  SupplyManagementScreen,
-  AdminSalesReportsScreen,
-  AdminEODScreen,
 } from './src/screens/PlaceholderScreens';
+import UserListScreen from './src/screens/UserListScreen';
+import AddUserScreen from './src/screens/AddUserScreen';
+import SupplyManagementScreen from './src/screens/SupplyManagementScreen';
 import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
 import VehicleListScreen from './src/screens/VehicleListScreen';
 import AddVehicleScreen from './src/screens/AddVehicleScreen';
@@ -72,10 +71,11 @@ function RootNavigator() {
             <Stack.Screen name="AddProduct" component={AddProductScreen} />
 
             {/* Admin Specific Routes */}
-            <Stack.Screen name="UserManagement" component={UserManagementScreen} />
+            <Stack.Screen name="UserManagement" component={UserListScreen} />
+            <Stack.Screen name="AddUser" component={AddUserScreen} />
             <Stack.Screen name="SupplyManagement" component={SupplyManagementScreen} />
-            <Stack.Screen name="AdminSalesReports" component={AdminSalesReportsScreen} />
-            <Stack.Screen name="AdminEOD" component={AdminEODScreen} />
+            <Stack.Screen name="AdminSalesReports" component={ReportsScreen} />
+            <Stack.Screen name="AdminEOD" component={ReconciliationScreen} />
           </>
         ) : (
           // === AUTH SCREENS (Login only) ===

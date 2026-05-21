@@ -10,22 +10,30 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
 
 const { width } = Dimensions.get('window');
+
+export let globalVehiclesList = [
+  { vehicleId: '1', vehicleNo: 'TN 01 AB 1234', VehicleName: 'Tata Ace', vehicleOwner: 'John Doe', status: 'Active' },
+  { vehicleId: '2', vehicleNo: 'TN 02 XY 5678', VehicleName: 'Mahindra Bolero', vehicleOwner: 'Jane Smith', status: 'Active' },
+  { vehicleId: '3', vehicleNo: 'KL 05 CD 9012', VehicleName: 'Ashok Leyland Dost', vehicleOwner: 'Acme Corp', status: 'Inactive' },
+];
 
 const VehicleListScreen = ({ navigation, route }) => {
   const { username } = route.params || { username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock Data for Vehicles
-  const [vehicles, setVehicles] = useState([
-    { vehicleId: '1', vehicleNo: 'TN 01 AB 1234', VehicleName: 'Tata Ace', vehicleOwner: 'John Doe', status: 'Active' },
-    { vehicleId: '2', vehicleNo: 'TN 02 XY 5678', VehicleName: 'Mahindra Bolero', vehicleOwner: 'Jane Smith', status: 'Active' },
-    { vehicleId: '3', vehicleNo: 'KL 05 CD 9012', VehicleName: 'Ashok Leyland Dost', vehicleOwner: 'Acme Corp', status: 'Inactive' },
-  ]);
+  // Sync with global runtime memory when screen comes into focus
+  const [vehicles, setVehicles] = useState(globalVehiclesList);
+  useFocusEffect(
+    React.useCallback(() => {
+      setVehicles([...globalVehiclesList]);
+    }, [])
+  );
 
   const filteredVehicles = vehicles.filter(v =>
     v.VehicleName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -128,7 +136,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15,
     backgroundColor: '#FFFFFF',
@@ -140,21 +148,21 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   menuBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuIconText: {
-    fontSize: 24,
+    fontSize: 20,
     color: '#1E293B',
   },
   headerTitleContainer: {
     flex: 1,
     alignItems: 'flex-start',
-    marginLeft: 15,
+    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 16,
@@ -179,27 +187,27 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: 16,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F5F9',
     borderRadius: 14,
-    paddingHorizontal: 15,
-    height: 56,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    height: 48,
+    marginBottom: 16,
   },
   searchIcon: {
-    fontSize: 18,
+    fontSize: 16,
     marginRight: 10,
+    color: '#64748B',
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     color: '#1E293B',
+    fontWeight: '500',
   },
   scrollContent: {
     paddingBottom: 20,
@@ -238,7 +246,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   vehicleName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1E293B',
   },

@@ -19,7 +19,5 @@ const styles = StyleSheet.create({
 });
 
 export const SalesScreen = () => <PlaceholderScreen title="Sales" />;
-export const UserManagementScreen = () => <PlaceholderScreen title="User Management" />;
-export const SupplyManagementScreen = () => <PlaceholderScreen title="Supply Management" />;
 export const AdminSalesReportsScreen = () => <PlaceholderScreen title="Sales Reports" />;
 export const AdminEODScreen = () => <PlaceholderScreen title="EOD Reconciliation" />;

@@ -47,7 +47,7 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
         }),
       ]).start();
     }
-  }, [isOpen]);
+  }, [isOpen, fadeAnim, slideAnim]);
 
   const isAdmin = userData?.role === 'admin';
 
@@ -56,7 +56,7 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     { name: 'Product Management', icon: '📦', route: 'ProductManagement' },
     { name: 'User Management', icon: '👥', route: 'UserManagement' },
     { name: 'Supply Management', icon: '🚚', route: 'SupplyManagement' },
-    { name: 'Sales Reports', icon: '📊', route: 'AdminSalesReports' },
+    { name: 'Sales Reports', icon: '📊', route: 'Reports' },
     { name: 'EOD Reconciliation', icon: '💰', route: 'AdminEOD' },
     { name: 'Vehicles', icon: '🚚', route: 'Vehicles' },
   ];

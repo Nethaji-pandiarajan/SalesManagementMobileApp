@@ -22,10 +22,10 @@ const CategoryListScreen = ({ navigation, route }) => {
 
   // Mock Data for Categories
   const [categories, setCategories] = useState([
-    { categoryId: '1', categoryName: 'Beverages', description: 'Soft drinks, juices, and water', status: 'Active' },
-    { categoryId: '2', categoryName: 'Snacks', description: 'Chips, biscuits, and nuts', status: 'Active' },
-    { categoryId: '3', categoryName: 'Dairy', description: 'Milk, cheese, and yogurt', status: 'Active' },
-    { categoryId: '4', categoryName: 'Produce', description: 'Fresh fruits and vegetables', status: 'Inactive' },
+    { categoryId: '1', categoryName: 'Jo gold chekku gingelly oil', description: 'Pure cold pressed gingelly oil', status: 'Active' },
+    { categoryId: '2', categoryName: 'Sri Lakshmi chekku gingelly oil', description: 'Traditional chekku gingelly oil', status: 'Active' },
+    { categoryId: '3', categoryName: 'Jo gold chekku groundnut oil', description: 'Pure cold pressed groundnut oil', status: 'Active' },
+    { categoryId: '4', categoryName: 'Maha gold deepam oil', description: 'Premium quality deepam oil', status: 'Active' },
   ]);
 
   const filteredCategories = categories.filter(c =>
@@ -84,25 +84,23 @@ const CategoryListScreen = ({ navigation, route }) => {
               style={styles.card}
               onPress={() => navigation.navigate('ProductList', { category })}
             >
-              <View style={styles.cardInfo}>
-                <View style={styles.iconBox}>
-                  <Text style={styles.icon}>📁</Text>
+              <View style={styles.cardLeft}>
+                <View style={styles.folderIconContainer}>
+                  <Text style={styles.folderIcon}>🛢️</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{category.categoryName}</Text>
-                  <Text style={styles.description} numberOfLines={1}>{category.description}</Text>
-                </View>
+                <Text style={styles.name} numberOfLines={2}>{category.categoryName}</Text>
               </View>
-              
+
               <View style={styles.cardRight}>
-                <View style={styles.statusDotContainer}>
-                  <View style={[styles.statusDot, category.status === 'Active' ? styles.statusActive : styles.statusInactive]} />
-                </View>
-                <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddCategory', { category })}>
-                  <Text style={styles.editIcon}>✎</Text>
+                <View style={[styles.statusDot, category.status === 'Active' ? styles.statusActiveDot : styles.statusInactiveDot]} />
+                <TouchableOpacity
+                  style={styles.actionEditBtn}
+                  onPress={() => navigation.navigate('AddCategory', { category })}
+                >
+                  <Text style={styles.actionEditIcon}>✎</Text>
                 </TouchableOpacity>
-                <View style={styles.arrowIcon}>
-                  <Text style={styles.arrowText}>❯</Text>
+                <View style={styles.chevronContainer}>
+                  <Text style={styles.chevronText}>❯</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -131,78 +129,81 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#087E66',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 4,
     zIndex: 10,
   },
   menuBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuIconText: {
-    fontSize: 24,
-    color: '#1E293B',
+    fontSize: 20,
+    color: '#FFFFFF',
   },
   headerTitleContainer: {
     flex: 1,
     alignItems: 'flex-start',
-    marginLeft: 15,
+    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#FFFFFF',
     letterSpacing: 1,
   },
   newBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   newBtnText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: '800',
+    color: '#087E66',
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: 16,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F5F9',
     borderRadius: 14,
-    paddingHorizontal: 15,
-    height: 56,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    height: 48,
+    marginBottom: 16,
   },
   searchIcon: {
-    fontSize: 18,
+    fontSize: 16,
     marginRight: 10,
+    color: '#64748B',
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     color: '#1E293B',
+    fontWeight: '500',
   },
   scrollContent: {
     paddingBottom: 20,
@@ -218,82 +219,73 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  cardInfo: {
+  cardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  icon: {
-    fontSize: 20,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  description: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-    lineHeight: 16,
-  },
-  arrowIcon: {
-    opacity: 0.2,
-    marginLeft: 10,
-  },
-  arrowText: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    marginRight: 10,
   },
   cardRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  editBtn: {
+  folderIconContainer: {
     width: 32,
     height: 32,
     borderRadius: 8,
+    backgroundColor: '#E6F2F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  folderIcon: {
+    fontSize: 16,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1E293B',
+    flex: 1,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusActiveDot: {
+    backgroundColor: '#10B981',
+  },
+  statusInactiveDot: {
+    backgroundColor: '#EF4444',
+  },
+  actionEditBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginRight: 10,
   },
-  editIcon: {
+  actionEditIcon: {
     fontSize: 14,
     color: '#64748B',
   },
-  statusDotContainer: {
-    padding: 6,
+  chevronContainer: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 4,
-  },
-  statusActive: {
-    backgroundColor: '#10B981', // Green
-  },
-  statusInactive: {
-    backgroundColor: '#EF4444', // Red
+  chevronText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: 'bold',
   },
   emptyContainer: {
     alignItems: 'center',

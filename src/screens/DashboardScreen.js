@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15,
     backgroundColor: '#087E66',
@@ -173,15 +173,15 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   menuBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuIconText: {
-    fontSize: 24,
+    fontSize: 20,
     color: '#FFFFFF',
   },
   headerTitleContainer: {
@@ -196,9 +196,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   profileBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 20,
   },
   welcomeSection: {

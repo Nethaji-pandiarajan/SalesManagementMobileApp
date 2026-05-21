@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { globalShopsList } from './ShopsScreen';
+
 const AddShopScreen = ({ navigation }) => {
   const [shopName, setShopName] = useState('');
   const [areaName, setAreaName] = useState('');
@@ -22,6 +24,17 @@ const AddShopScreen = ({ navigation }) => {
       Alert.alert('Error', 'Please fill in shop name and area.');
       return;
     }
+
+    const newShop = {
+      id: String(globalShopsList.length + 1),
+      shopName,
+      areaName,
+      balance: Number(initialBalance) || 0,
+      status,
+    };
+
+    globalShopsList.push(newShop);
+
     Alert.alert('Success', 'Shop added successfully!', [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
@@ -35,7 +48,7 @@ const AddShopScreen = ({ navigation }) => {
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <View style={styles.backBtnInner}>
-            <Text style={styles.backBtnText}>←</Text>
+            <Text style={styles.backBtnText}>❮</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
@@ -118,7 +131,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15,
     backgroundColor: '#FFFFFF',
@@ -126,23 +139,24 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
   },
   backBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backBtnInner: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   backBtnText: {
-    fontSize: 20,
+    fontSize: 16,
     color: '#1E293B',
     fontWeight: 'bold',
+    marginRight: 2,
   },
   headerTitleContainer: {
     flex: 1,
@@ -156,10 +170,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   headerRight: {
-    width: 44,
+    width: 38,
   },
   content: {
-    padding: 20,
+    padding: 16,
   },
   formCard: {
     backgroundColor: '#FFFFFF',
