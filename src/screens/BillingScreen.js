@@ -1,78 +1,89 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, TextInput, Alert, LayoutAnimation, Platform,
-  UIManager, Modal, FlatList,
+  UIManager, Modal, FlatList, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../config/config';
+import { useAuth } from '../context/AuthContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const inventoryCategories = [
-  {
-    categoryName: 'Jo gold chekku gingelly oil',
-    items: [
-      { id: 'JG-G-1L-B', name: '1 ltr bottle', price: 180 },
-      { id: 'JG-G-500-B', name: '500 ml bottle', price: 95 },
-      { id: 'JG-G-200-B', name: '200 ml bottle', price: 40 },
-      { id: 'JG-G-100-B', name: '100 ml bottle', price: 22 },
-      { id: 'JG-G-1L-P', name: '1 ltr pouch', price: 175 },
-      { id: 'JG-G-500-P', name: '500 ml pouch', price: 90 },
-      { id: 'JG-G-100-P', name: '100 ml pouch', price: 20 },
-      { id: 'JG-G-50-P', name: '50 ml pouch', price: 12 },
-      { id: 'JG-G-5L-C', name: '5 ltr can', price: 850 },
-      { id: 'JG-G-15K-T', name: '15 kg Tin', price: 2500 },
-      { id: 'JG-G-40K-OC', name: '40 kg oil cake', price: 1200 },
-      { id: 'JG-G-50K-OC', name: '50 kg oil cake', price: 1500 },
-      { id: 'JG-G-40K-GOC', name: '40 kg grinded oil cake', price: 1300 },
-      { id: 'JG-G-50K-GOC', name: '50 kg grinded oil cake', price: 1600 },
-    ],
-  },
-  {
-    categoryName: 'Sri Lakshmi chekku gingelly oil',
-    items: [
-      { id: 'SL-G-1L-B', name: '1 ltr bottle', price: 170 },
-      { id: 'SL-G-500-B', name: '500 ml bottle', price: 85 },
-      { id: 'SL-G-5L-C', name: '5 ltr can', price: 800 },
-      { id: 'SL-G-15K-T', name: '15 kg Tin', price: 2400 },
-    ],
-  },
-  {
-    categoryName: 'Jo gold chekku groundnut oil',
-    items: [
-      { id: 'JG-GN-1L-B', name: '1 ltr bottle', price: 160 },
-      { id: 'JG-GN-500-B', name: '500 ml bottle', price: 85 },
-      { id: 'JG-GN-5L-C', name: '5 ltr can', price: 780 },
-      { id: 'JG-GN-15K-T', name: '15 kg Tin', price: 2300 },
-      { id: 'JG-GN-50K-OC', name: '50 kg oil cake', price: 1400 },
-    ],
-  },
-  {
-    categoryName: 'Maha gold deepam oil',
-    items: [
-      { id: 'MG-D-1L-B', name: '1 ltr bottle', price: 120 },
-      { id: 'MG-D-500-B', name: '500 ml bottle', price: 65 },
-      { id: 'MG-D-200-B', name: '200 ml bottle', price: 30 },
-      { id: 'MG-D-100-B', name: '100 ml bottle', price: 18 },
-      { id: 'MG-D-15K-T', name: '15 kg Tin', price: 1800 },
-    ],
-  },
-];
-
 const BillingScreen = ({ navigation, route }) => {
-  const { shop } = route.params || { shop: { shopName: 'Test Shop', balance: 1200 } };
+  const { shop, supply_id } = route.params || { shop: { shopName: 'Test Shop', balance: 1200 } };
+  const { userData } = useAuth();
+
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [paidAmount, setPaidAmount] = useState('');
   const [paymentType, setPaymentType] = useState('Cash');
+  const [description, setDescription] = useState('');
   const [isBalanceExpanded, setIsBalanceExpanded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(inventoryCategories[0]);
   const [categoryDropOpen, setCategoryDropOpen] = useState(false);
+
+  const fetchProducts = async () => {
+    setLoadingProducts(true);
+    setFetchError(null);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setFetchError('No authentication token found. Please log in again.');
+        setLoadingProducts(false);
+        return;
+      }
+
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/products`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        const mapped = data.map(cat => ({
+          categoryName: cat.category_name,
+          categoryId: cat.category_id,
+          items: (cat.products || []).map(p => ({
+            id: String(p.product_id),
+            name: p.product_name,
+            price: p.rate,
+            sku_code: p.sku_code,
+            unit: p.unit
+          }))
+        }));
+
+        setCategories(mapped);
+        if (mapped.length > 0) {
+          setSelectedCategory(mapped[0]);
+        }
+      } else {
+        setFetchError(data.error || 'Failed to load products.');
+      }
+    } catch (err) {
+      console.error('Fetch products catalog error:', err);
+      setFetchError('Network error. Unable to load products catalog.');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   const toggleProduct = (product) => {
     const exists = selectedProducts.find(p => p.id === product.id);
@@ -80,7 +91,7 @@ const BillingScreen = ({ navigation, route }) => {
       setSelectedProducts(selectedProducts.filter(p => p.id !== product.id));
     } else {
       // find which category this product belongs to
-      const cat = inventoryCategories.find(c => c.items.some(i => i.id === product.id));
+      const cat = categories.find(c => c.items.some(i => i.id === product.id));
       setSelectedProducts([...selectedProducts, {
         ...product,
         quantity: 1,
@@ -104,16 +115,71 @@ const BillingScreen = ({ navigation, route }) => {
 
   const totalBill = selectedProducts.reduce((sum, p) => sum + p.quantity * p.currentRate, 0);
   const currentPaid = parseFloat(paidAmount) || 0;
-  const liveBalance = shop.balance + totalBill - currentPaid;
+  const previousBalance = shop.pending_balance !== undefined && shop.pending_balance !== null
+    ? shop.pending_balance
+    : (shop.balance !== undefined && shop.balance !== null ? shop.balance : 0);
+  const liveBalance = previousBalance + totalBill - currentPaid;
 
-  const handleFinish = () => {
-    if (selectedProducts.length === 0 && currentPaid === 0) {
-      Alert.alert('Empty Bill', 'Please add products or record a payment.');
+  const handleFinish = async () => {
+    if (selectedProducts.length === 0) {
+      Alert.alert('No Products', 'Please add at least one product before finishing the transaction.');
       return;
     }
-    Alert.alert('Success', 'Bill generated and balance updated!', [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+
+    if (!supply_id) {
+      Alert.alert('Error', 'Active trip not found. Please go back and try again.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Session Expired', 'Please log in again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const payload = {
+        shop_id: shop.shop_id,
+        supply_id: supply_id,
+        org_id: userData?.org_id || shop?.org_id,
+        items: selectedProducts.map(p => ({
+          product_id: parseInt(p.id),
+          quantity_sold: p.quantity,
+          rate_at_sale: p.currentRate,
+        })),
+        paid_amount: currentPaid,
+        payment_type: paymentType.toUpperCase(),
+        description: description || null,
+      };
+
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/sales/record-transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert(
+          '✅ Transaction Recorded',
+          `Bill: ₹${data.total_amount}  |  Paid: ₹${data.paid_amount}  |  Pending: ₹${data.pending_amount}`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } else {
+        Alert.alert('Transaction Failed', data.error || 'Something went wrong. Please try again.');
+      }
+    } catch (err) {
+      console.error('Record transaction error:', err);
+      Alert.alert('Network Error', 'Unable to connect to the server. Please check your connection.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const toggleAccordion = () => {
@@ -260,8 +326,20 @@ const BillingScreen = ({ navigation, route }) => {
                 </ScrollView>
               </View>
             </View>
+            <View style={styles.descriptionRow}>
+              <View style={styles.inputGroupFull}>
+                <Text style={styles.inputLabelDark}>Description / Remarks</Text>
+                <TextInput
+                  style={styles.descriptionInputDark}
+                  placeholder="Enter transaction details (optional)"
+                  placeholderTextColor="#64748B"
+                  value={description}
+                  onChangeText={setDescription}
+                />
+              </View>
+            </View>
             <View style={styles.divider} />
-            <View style={styles.balanceRow}><Text style={styles.balanceLabel}>Previous Balance</Text><Text style={styles.balanceValue}>₹{shop.balance.toLocaleString()}</Text></View>
+            <View style={styles.balanceRow}><Text style={styles.balanceLabel}>Previous Balance</Text><Text style={styles.balanceValue}>₹{previousBalance.toLocaleString()}</Text></View>
             <View style={styles.balanceRow}><Text style={styles.balanceLabel}>Current Bill</Text><Text style={styles.billValue}>+ ₹{totalBill.toLocaleString()}</Text></View>
             <View style={styles.balanceRow}><Text style={styles.balanceLabel}>Amount Paid</Text><Text style={styles.paidValue}>- ₹{currentPaid.toLocaleString()}</Text></View>
             <View style={styles.divider} />
@@ -272,8 +350,25 @@ const BillingScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}>
-          <Text style={styles.finishBtnText}>Finish Transaction</Text>
+        <TouchableOpacity
+          style={[
+            styles.finishBtn,
+            (selectedProducts.length === 0 || !paidAmount || paidAmount.trim() === '' || isSubmitting) && styles.finishBtnDisabled,
+          ]}
+          onPress={handleFinish}
+          disabled={selectedProducts.length === 0 || !paidAmount || paidAmount.trim() === '' || isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.finishBtnText}>
+              {selectedProducts.length === 0
+                ? 'Add Products to Finish'
+                : (!paidAmount || paidAmount.trim() === '')
+                ? 'Enter Paid Amount'
+                : 'Finish Transaction'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -288,57 +383,73 @@ const BillingScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Category Dropdown */}
-            <Text style={styles.modalLabel}>Category</Text>
-            <TouchableOpacity style={styles.dropdownBtn} onPress={() => setCategoryDropOpen(v => !v)}>
-              <Text style={styles.dropdownBtnText} numberOfLines={1}>{selectedCategory.categoryName}</Text>
-              <Text style={styles.dropdownArrow}>{categoryDropOpen ? '▲' : '▼'}</Text>
-            </TouchableOpacity>
-
-            {categoryDropOpen && (
-              <View style={styles.dropdownList}>
-                {inventoryCategories.map((cat, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.dropdownItem, selectedCategory.categoryName === cat.categoryName && styles.dropdownItemActive]}
-                    onPress={() => { setSelectedCategory(cat); setCategoryDropOpen(false); }}
-                  >
-                    <Text style={[styles.dropdownItemText, selectedCategory.categoryName === cat.categoryName && styles.dropdownItemTextActive]}>
-                      {cat.categoryName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+            {loadingProducts ? (
+              <View style={styles.modalLoadingContainer}>
+                <ActivityIndicator size="large" color="#087E66" />
+                <Text style={styles.modalLoadingText}>Loading products catalog...</Text>
               </View>
-            )}
-
-            {/* Products List */}
-            {!categoryDropOpen && (
-              <>
-                <Text style={styles.modalLabel}>Products</Text>
-                <FlatList
-                  data={selectedCategory.items}
-                  keyExtractor={item => item.id}
-                  style={styles.productList}
-                  showsVerticalScrollIndicator={false}
-                  renderItem={({ item }) => {
-                    const isSelected = selectedProducts.find(p => p.id === item.id);
-                    return (
-                      <TouchableOpacity
-                        style={[styles.modalProductItem, isSelected && styles.modalProductItemSelected]}
-                        onPress={() => toggleProduct(item)}
-                      >
-                        <View>
-                          <Text style={[styles.modalProductName, isSelected && styles.modalProductNameSelected]}>{item.name}</Text>
-                          <Text style={[styles.modalProductPrice, isSelected && styles.modalProductPriceSelected]}>₹{item.price}/unit</Text>
-                        </View>
-                        {isSelected && <Text style={styles.checkIcon}>✓</Text>}
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-                <TouchableOpacity style={styles.modalDoneBtn} onPress={() => { setModalVisible(false); setCategoryDropOpen(false); }}>
-                  <Text style={styles.modalDoneBtnText}>Done  ({selectedProducts.length} selected)</Text>
+            ) : fetchError ? (
+              <View style={styles.modalErrorContainer}>
+                <Text style={styles.modalErrorText}>⚠️ {fetchError}</Text>
+                <TouchableOpacity style={styles.modalRetryBtn} onPress={fetchProducts}>
+                  <Text style={styles.modalRetryBtnText}>Retry</Text>
                 </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {/* Category Dropdown */}
+                <Text style={styles.modalLabel}>Category</Text>
+                <TouchableOpacity style={styles.dropdownBtn} onPress={() => setCategoryDropOpen(v => !v)}>
+                  <Text style={styles.dropdownBtnText} numberOfLines={1}>{selectedCategory?.categoryName || 'Select Category'}</Text>
+                  <Text style={styles.dropdownArrow}>{categoryDropOpen ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+
+                {categoryDropOpen && (
+                  <View style={styles.dropdownList}>
+                    {categories.map((cat, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        style={[styles.dropdownItem, selectedCategory?.categoryName === cat.categoryName && styles.dropdownItemActive]}
+                        onPress={() => { setSelectedCategory(cat); setCategoryDropOpen(false); }}
+                      >
+                        <Text style={[styles.dropdownItemText, selectedCategory?.categoryName === cat.categoryName && styles.dropdownItemTextActive]}>
+                          {cat.categoryName}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Products List */}
+                {!categoryDropOpen && (
+                  <>
+                    <Text style={styles.modalLabel}>Products</Text>
+                    <FlatList
+                      data={selectedCategory ? selectedCategory.items : []}
+                      keyExtractor={item => item.id}
+                      style={styles.productList}
+                      showsVerticalScrollIndicator={false}
+                      renderItem={({ item }) => {
+                        const isSelected = selectedProducts.find(p => p.id === item.id);
+                        return (
+                          <TouchableOpacity
+                            style={[styles.modalProductItem, isSelected && styles.modalProductItemSelected]}
+                            onPress={() => toggleProduct(item)}
+                          >
+                            <View>
+                              <Text style={[styles.modalProductName, isSelected && styles.modalProductNameSelected]}>{item.name}</Text>
+                              <Text style={[styles.modalProductPrice, isSelected && styles.modalProductPriceSelected]}>₹{item.price}/unit</Text>
+                            </View>
+                            {isSelected && <Text style={styles.checkIcon}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      }}
+                    />
+                    <TouchableOpacity style={styles.modalDoneBtn} onPress={() => { setModalVisible(false); setCategoryDropOpen(false); }}>
+                      <Text style={styles.modalDoneBtnText}>Done  ({selectedProducts.length} selected)</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </>
             )}
           </View>
@@ -488,6 +599,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15, fontSize: 16, fontWeight: '800', color: '#FFFFFF',
     borderWidth: 1, borderColor: '#475569',
   },
+  descriptionRow: {
+    marginTop: 12,
+  },
+  inputGroupFull: {
+    width: '100%',
+  },
+  descriptionInputDark: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 15,
+    fontSize: 14,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#475569',
+  },
   typeRow: { gap: 8 },
   typeBtnDark: {
     height: 48, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#334155',
@@ -508,6 +635,10 @@ const styles = StyleSheet.create({
   finishBtn: {
     backgroundColor: '#087E66', borderRadius: 14, height: 56,
     justifyContent: 'center', alignItems: 'center', elevation: 4,
+  },
+  finishBtnDisabled: {
+    backgroundColor: '#334155',
+    elevation: 0,
   },
   finishBtnText: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
 
@@ -553,6 +684,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', marginTop: 12,
   },
   modalDoneBtnText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+
+  // Loader & Error styling inside modal
+  modalLoadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  modalLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  modalErrorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  modalErrorText: {
+    fontSize: 14,
+    color: '#EF4444',
+    textAlign: 'center',
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  modalRetryBtn: {
+    backgroundColor: '#1E293B',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  modalRetryBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });
 
 export default BillingScreen;

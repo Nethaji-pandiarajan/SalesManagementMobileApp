@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,44 +8,81 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { globalVehiclesList } from './VehicleListScreen';
+import { useRoute } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createVehicle, getStoredToken, updateVehicle } from '../services/vehicleService';
 
 const AddVehicleScreen = ({ navigation }) => {
+  const route = useRoute();
+  const existingVehicle = route?.params?.vehicle;
+
+  const [vehicleId, setVehicleId] = useState(null);
   const [vehicleNo, setVehicleNo] = useState('');
   const [vehicleName, setVehicleName] = useState('');
   const [vehicleOwner, setVehicleOwner] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('Active'); // Active or Inactive
+  const [status, setStatus] = useState('ACTIVE');
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (existingVehicle) {
+      setVehicleId(existingVehicle.vehicle_id || existingVehicle.vehicleId || null);
+      setVehicleNo(existingVehicle.vehicle_no || existingVehicle.vehicleNo || '');
+      setVehicleName(existingVehicle.vehicle_name || existingVehicle.VehicleName || '');
+      setVehicleOwner(existingVehicle.vehicle_owner || existingVehicle.vehicleOwner || '');
+      setDescription(existingVehicle.description || '');
+      setStatus(((existingVehicle.vehicle_status || existingVehicle.status || 'ACTIVE')).toString().toUpperCase());
+    } else {
+      setVehicleId(null);
+      setVehicleNo('');
+      setVehicleName('');
+      setVehicleOwner('');
+      setDescription('');
+      setStatus('ACTIVE');
+    }
+  }, [existingVehicle?.vehicle_id || existingVehicle?.vehicleId]);
+
+  const handleSave = async () => {
     if (!vehicleNo || !vehicleName) {
       Alert.alert('Error', 'Please fill in vehicle number and name.');
       return;
     }
 
-    // Prepare data to save, including mock system fields
-    const newVehicleData = {
-      vehicleId: String(globalVehiclesList.length + 1),
-      vehicleNo,
-      VehicleName: vehicleName,
-      vehicleOwner,
-      description,
-      status,
-      createdOn: new Date().toISOString(),
-      updatedOn: new Date().toISOString(),
-      createdBy: 'currentUser', // Mocked user ID
-      updatedBy: 'currentUser',
-      orgId: 'org123', // Mocked Org ID
-    };
+    setLoading(true);
+    try {
+      const token = await getStoredToken();
+      if (!token) {
+        Alert.alert('Error', 'No authentication token found. Please log in again.');
+        return;
+      }
 
-    globalVehiclesList.push(newVehicleData);
+      const payload = {
+        vehicleNo,
+        vehicleName,
+        vehicleOwner,
+        description,
+        status,
+      };
 
-    Alert.alert('Success', 'Vehicle added successfully!', [
-      { text: 'OK', onPress: () => navigation.goBack() }
-    ]);
+      const { response, data } = vehicleId
+        ? await updateVehicle(token, vehicleId, payload)
+        : await createVehicle(token, payload);
+
+      if (response.ok) {
+        Alert.alert('Success', vehicleId ? 'Vehicle updated successfully!' : 'Vehicle added successfully!', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        Alert.alert('Error', data.error || 'Failed to save vehicle.');
+      }
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to save vehicle.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -111,29 +148,33 @@ const AddVehicleScreen = ({ navigation }) => {
             <Text style={styles.label}>Status</Text>
             <View style={styles.statusToggleContainer}>
               <TouchableOpacity
-                style={[styles.statusBtn, status === 'Active' && styles.statusBtnActive]}
-                onPress={() => setStatus('Active')}
+                style={[styles.statusBtn, status === 'ACTIVE' && styles.statusBtnActive]}
+                onPress={() => setStatus('ACTIVE')}
               >
                 <View style={styles.statusBtnContent}>
-                  <View style={[styles.toggleDot, { backgroundColor: status === 'Active' ? '#FFFFFF' : '#10B981' }]} />
-                  <Text style={[styles.statusBtnText, status === 'Active' && styles.statusBtnTextActive]}>Active</Text>
+                  <View style={[styles.toggleDot, { backgroundColor: status === 'ACTIVE' ? '#FFFFFF' : '#10B981' }]} />
+                  <Text style={[styles.statusBtnText, status === 'ACTIVE' && styles.statusBtnTextActive]}>Active</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.statusBtn, status === 'Inactive' && styles.statusBtnInactive]}
-                onPress={() => setStatus('Inactive')}
+                style={[styles.statusBtn, status === 'INACTIVE' && styles.statusBtnInactive]}
+                onPress={() => setStatus('INACTIVE')}
               >
                 <View style={styles.statusBtnContent}>
-                  <View style={[styles.toggleDot, { backgroundColor: status === 'Inactive' ? '#FFFFFF' : '#EF4444' }]} />
-                  <Text style={[styles.statusBtnText, status === 'Inactive' && styles.statusBtnTextActive]}>Inactive</Text>
+                  <View style={[styles.toggleDot, { backgroundColor: status === 'INACTIVE' ? '#FFFFFF' : '#EF4444' }]} />
+                  <Text style={[styles.statusBtnText, status === 'INACTIVE' && styles.statusBtnTextActive]}>Inactive</Text>
                 </View>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Save Vehicle</Text>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveBtnText}>{vehicleId ? 'Update Vehicle' : 'Save Vehicle'}</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

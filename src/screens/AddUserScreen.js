@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,73 +10,153 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { globalUsersList } from './UserListScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../config/config';
 
 const AddUserScreen = ({ navigation, route }) => {
   const { user } = route.params || {};
 
+  const [roles, setRoles] = useState([]);
   const [username, setUsername] = useState(user ? user.username : '');
+  const [password, setPassword] = useState('');
   const [email, setEmail] = useState(user ? user.email : '');
   const [phone, setPhone] = useState(user ? user.phone : '');
   const [roleId, setRoleId] = useState(user ? user.role_id : 2); // 1: Admin, 2: Executive
   const [address, setAddress] = useState(user ? user.address : '');
   const [stateName, setStateName] = useState(user ? user.state : 'Tamil Nadu');
-  const [status, setStatus] = useState(user ? user.status : 'ACTIVE');
+  const [status, setStatus] = useState(user ? (user.status || '').trim().toUpperCase() : 'ACTIVE');
 
-  const handleSave = () => {
+  // Fetch organization roles dynamically
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        if (!token) return;
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/roles`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setRoles(data);
+        }
+      } catch (err) {
+        console.error('Error fetching roles:', err);
+      }
+    };
+    fetchRoles();
+  }, []);
+
+  // Synchronize form values when route parameters or fetched roles update
+  useEffect(() => {
+    const { user: currentUser } = route.params || {};
+    const execRole = roles.find(r => r.role_name.toLowerCase().includes('executive'));
+    const defaultRoleId = execRole ? execRole.role_id : 2;
+
+    if (currentUser) {
+      setUsername(currentUser.username || '');
+      setEmail(currentUser.email || '');
+      setPhone(currentUser.phone || '');
+      setRoleId(currentUser.role_id || defaultRoleId);
+      setAddress(currentUser.address || '');
+      setStateName(currentUser.state || 'Tamil Nadu');
+      setStatus((currentUser.status || '').trim().toUpperCase() || 'ACTIVE');
+    } else {
+      setUsername('');
+      setEmail('');
+      setPhone('');
+      setRoleId(defaultRoleId);
+      setAddress('');
+      setStateName('Tamil Nadu');
+      setStatus('ACTIVE');
+    }
+    setPassword('');
+  }, [route.params, roles]);
+
+  const handleSave = async () => {
     if (!username.trim()) {
       Alert.alert('Error', 'Please fill in Username.');
       return;
     }
+    if (!user && !password.trim()) {
+      Alert.alert('Error', 'Please fill in Password.');
+      return;
+    }
 
-    if (user) {
-      // Update existing user in global list
-      const updatedUser = {
-        ...user,
-        username: username.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        role_id: roleId,
-        address: address.trim(),
-        state: stateName.trim(),
-        status: status.toUpperCase(),
-        updated_on: new Date().toISOString(),
-        updated_by: 1,
-      };
-
-      const index = globalUsersList.findIndex(u => u.user_id === user.user_id);
-      if (index !== -1) {
-        globalUsersList[index] = updatedUser;
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Error', 'Session expired. Please log in again.');
+        return;
       }
 
-      Alert.alert('Success', 'User updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    } else {
-      // Add new user to global list
-      const newUser = {
-        user_id: Math.max(...globalUsersList.map(u => u.user_id), 0) + 1,
+      const bodyData = {
         username: username.trim(),
         email: email.trim(),
         phone: phone.trim(),
-        role_id: roleId,
+        status: status.toUpperCase(),
         address: address.trim(),
         state: stateName.trim(),
-        status: status.toUpperCase(),
-        org_id: 1,
-        created_by: 1,
-        updated_by: 1,
-        created_on: new Date().toISOString(),
-        updated_on: new Date().toISOString(),
+        role_id: roleId,
       };
 
-      globalUsersList.push(newUser);
+      if (password.trim()) {
+        bodyData.password = password.trim();
+      }
 
-      Alert.alert('Success', 'User added successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      if (user) {
+        // PUT request to update
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/users/${user.user_id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(bodyData),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          Alert.alert('Success', 'User updated successfully!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        } else {
+          Alert.alert('Error', data.error || 'Failed to update user.');
+        }
+      } else {
+        // POST request to create
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(bodyData),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          Alert.alert('Success', 'User added successfully!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        } else {
+          Alert.alert('Error', data.error || 'Failed to add user.');
+        }
+      }
+    } catch (err) {
+      console.error('Save user error:', err);
+      Alert.alert('Error', 'Network error. Failed to save user.');
     }
   };
+
+  const adminRole = roles.find(r => r.role_name === 'Admin');
+  const execRole = roles.find(r => r.role_name.toLowerCase().includes('executive'));
+
+  const adminRoleId = adminRole ? adminRole.role_id : 1;
+  const execRoleId = execRole ? execRole.role_id : 2;
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -109,19 +189,32 @@ const AddUserScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.inputGroup}>
+            <Text style={styles.label}>{user ? 'New Password (Optional)' : 'Password'}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={user ? 'Leave blank to keep current' : 'Enter password'}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={true}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Role</Text>
             <View style={styles.roleToggleContainer}>
               <TouchableOpacity
-                style={[styles.roleBtn, roleId === 2 && styles.roleBtnActive]}
-                onPress={() => setRoleId(2)}
+                style={[styles.roleBtn, roleId === execRoleId && styles.roleBtnActive]}
+                onPress={() => setRoleId(execRoleId)}
               >
-                <Text style={[styles.roleBtnText, roleId === 2 && styles.roleBtnTextActive]}>Executive</Text>
+                <Text style={[styles.roleBtnText, roleId === execRoleId && styles.roleBtnTextActive]}>Executive</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.roleBtn, roleId === 1 && styles.roleBtnActive]}
-                onPress={() => setRoleId(1)}
+                style={[styles.roleBtn, roleId === adminRoleId && styles.roleBtnActive]}
+                onPress={() => setRoleId(adminRoleId)}
               >
-                <Text style={[styles.roleBtnText, roleId === 1 && styles.roleBtnTextActive]}>Admin</Text>
+                <Text style={[styles.roleBtnText, roleId === adminRoleId && styles.roleBtnTextActive]}>Admin</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -175,21 +268,21 @@ const AddUserScreen = ({ navigation, route }) => {
             <Text style={styles.label}>Status</Text>
             <View style={styles.statusToggleContainer}>
               <TouchableOpacity
-                style={[styles.statusBtn, status.toUpperCase() === 'ACTIVE' && styles.statusBtnActive]}
+                style={[styles.statusBtn, status === 'ACTIVE' && styles.statusBtnActive]}
                 onPress={() => setStatus('ACTIVE')}
               >
                 <View style={styles.statusBtnContent}>
-                  <View style={[styles.toggleDot, { backgroundColor: status.toUpperCase() === 'ACTIVE' ? '#FFFFFF' : '#10B981' }]} />
-                  <Text style={[styles.statusBtnText, status.toUpperCase() === 'ACTIVE' && styles.statusBtnTextActive]}>Active</Text>
+                  <View style={[styles.toggleDot, { backgroundColor: status === 'ACTIVE' ? '#FFFFFF' : '#10B981' }]} />
+                  <Text style={[styles.statusBtnText, status === 'ACTIVE' && styles.statusBtnTextActive]}>Active</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.statusBtn, status.toUpperCase() === 'INACTIVE' && styles.statusBtnInactive]}
+                style={[styles.statusBtn, status === 'INACTIVE' && styles.statusBtnInactive]}
                 onPress={() => setStatus('INACTIVE')}
               >
                 <View style={styles.statusBtnContent}>
-                  <View style={[styles.toggleDot, { backgroundColor: status.toUpperCase() === 'INACTIVE' ? '#FFFFFF' : '#EF4444' }]} />
-                  <Text style={[styles.statusBtnText, status.toUpperCase() === 'INACTIVE' && styles.statusBtnTextActive]}>Inactive</Text>
+                  <View style={[styles.toggleDot, { backgroundColor: status === 'INACTIVE' ? '#FFFFFF' : '#EF4444' }]} />
+                  <Text style={[styles.statusBtnText, status === 'INACTIVE' && styles.statusBtnTextActive]}>Inactive</Text>
                 </View>
               </TouchableOpacity>
             </View>

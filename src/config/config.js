@@ -4,9 +4,7 @@
  */
 
 const CONFIG = {
-  // Use your computer's local network IP for physical device testing
-  // Or 'http://10.0.2.2:5000' for Android Emulator
-  API_BASE_URL: 'http://http://10.0.2.2:5000',
+  API_BASE_URL: 'https://salesmanagementmobileapp-backend.onrender.com',
   TIMEOUT: 10000,
 };
 

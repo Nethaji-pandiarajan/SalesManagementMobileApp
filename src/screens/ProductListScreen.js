@@ -8,63 +8,75 @@ import {
   StatusBar,
   TextInput,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../config/config';
 
 const { width } = Dimensions.get('window');
-
-const categoryProducts = {
-  'Jo gold chekku gingelly oil': [
-    { productId: 'JG-G-1L-B', sku_code: 'JG-G-1L-B', productName: '1 ltr bottle', unit: 'Liter', rate: 180, status: 'Active' },
-    { productId: 'JG-G-500-B', sku_code: 'JG-G-500-B', productName: '500 ml bottle', unit: '500ml', rate: 95, status: 'Active' },
-    { productId: 'JG-G-200-B', sku_code: 'JG-G-200-B', productName: '200 ml bottle', unit: '200ml', rate: 40, status: 'Active' },
-    { productId: 'JG-G-100-B', sku_code: 'JG-G-100-B', productName: '100 ml bottle', unit: '100ml', rate: 22, status: 'Active' },
-    { productId: 'JG-G-1L-P', sku_code: 'JG-G-1L-P', productName: '1 ltr pouch', unit: 'Liter', rate: 175, status: 'Active' },
-    { productId: 'JG-G-500-P', sku_code: 'JG-G-500-P', productName: '500 ml pouch', unit: '500ml', rate: 90, status: 'Active' },
-    { productId: 'JG-G-100-P', sku_code: 'JG-G-100-P', productName: '100 ml pouch', unit: '100ml', rate: 20, status: 'Active' },
-    { productId: 'JG-G-50-P', sku_code: 'JG-G-50-P', productName: '50 ml pouch', unit: '50ml', rate: 12, status: 'Active' },
-    { productId: 'JG-G-5L-C', sku_code: 'JG-G-5L-C', productName: '5 ltr can', unit: '5 Liters', rate: 850, status: 'Active' },
-    { productId: 'JG-G-15K-T', sku_code: 'JG-G-15K-T', productName: '15 kg Tin', unit: '15 kg', rate: 2500, status: 'Active' },
-    { productId: 'JG-G-40K-OC', sku_code: 'JG-G-40K-OC', productName: '40 kg oil cake', unit: '40 kg', rate: 1200, status: 'Active' },
-    { productId: 'JG-G-50K-OC', sku_code: 'JG-G-50K-OC', productName: '50 kg oil cake', unit: '50 kg', rate: 1500, status: 'Active' },
-    { productId: 'JG-G-40K-GOC', sku_code: 'JG-G-40K-GOC', productName: '40 kg grinded oil cake', unit: '40 kg', rate: 1300, status: 'Active' },
-    { productId: 'JG-G-50K-GOC', sku_code: 'JG-G-50K-GOC', productName: '50 kg grinded oil cake', unit: '50 kg', rate: 1600, status: 'Active' },
-  ],
-  'Sri Lakshmi chekku gingelly oil': [
-    { productId: 'SL-G-1L-B', sku_code: 'SL-G-1L-B', productName: '1 ltr bottle', unit: 'Liter', rate: 170, status: 'Active' },
-    { productId: 'SL-G-500-B', sku_code: 'SL-G-500-B', productName: '500 ml bottle', unit: '500ml', rate: 85, status: 'Active' },
-    { productId: 'SL-G-5L-C', sku_code: 'SL-G-5L-C', productName: '5 ltr can', unit: '5 Liters', rate: 800, status: 'Active' },
-    { productId: 'SL-G-15K-T', sku_code: 'SL-G-15K-T', productName: '15 kg Tin', unit: '15 kg', rate: 2400, status: 'Active' },
-  ],
-  'Jo gold chekku groundnut oil': [
-    { productId: 'JG-GN-1L-B', sku_code: 'JG-GN-1L-B', productName: '1 ltr bottle', unit: 'Liter', rate: 160, status: 'Active' },
-    { productId: 'JG-GN-500-B', sku_code: 'JG-GN-500-B', productName: '500 ml bottle', unit: '500ml', rate: 85, status: 'Active' },
-    { productId: 'JG-GN-5L-C', sku_code: 'JG-GN-5L-C', productName: '5 ltr can', unit: '5 Liters', rate: 780, status: 'Active' },
-    { productId: 'JG-GN-15K-T', sku_code: 'JG-GN-15K-T', productName: '15 kg Tin', unit: '15 kg', rate: 2300, status: 'Active' },
-    { productId: 'JG-GN-50K-OC', sku_code: 'JG-GN-50K-OC', productName: '50 kg oil cake', unit: '50 kg', rate: 1400, status: 'Active' },
-  ],
-  'Maha gold deepam oil': [
-    { productId: 'MG-D-1L-B', sku_code: 'MG-D-1L-B', productName: '1 ltr bottle', unit: 'Liter', rate: 120, status: 'Active' },
-    { productId: 'MG-D-500-B', sku_code: 'MG-D-500-B', productName: '500 ml bottle', unit: '500ml', rate: 65, status: 'Active' },
-    { productId: 'MG-D-200-B', sku_code: 'MG-D-200-B', productName: '200 ml bottle', unit: '200ml', rate: 30, status: 'Active' },
-    { productId: 'MG-D-100-B', sku_code: 'MG-D-100-B', productName: '100 ml bottle', unit: '100ml', rate: 18, status: 'Active' },
-    { productId: 'MG-D-15K-T', sku_code: 'MG-D-15K-T', productName: '15 kg Tin', unit: '15 kg', rate: 1800, status: 'Active' },
-  ],
-};
 
 const ProductListScreen = ({ navigation, route }) => {
   const { category, username } = route.params || { category: { categoryName: 'Products' }, username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Initial products from dictionary
-  const [products, setProducts] = useState(categoryProducts[category.categoryName] || []);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setError('No token found');
+        return;
+      }
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/products?category_id=${category.categoryId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const mapped = data.map(item => ({
+          productId: String(item.product_id),
+          sku_code: item.sku_code || '',
+          productName: item.product_name,
+          description: item.description || '',
+          unit: item.unit || '',
+          rate: Number(item.rate || 0),
+          status: item.status === 'ACTIVE' ? 'Active' : 'Inactive',
+          categoryId: item.category_id
+        }));
+        setProducts(mapped);
+      } else {
+        setError(data.error || 'Failed to fetch products');
+      }
+    } catch (err) {
+      console.error('Fetch products error:', err);
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProducts();
+    }, [])
+  );
 
   const filteredProducts = products.filter(p =>
-    p.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.sku_code.toLowerCase().includes(searchQuery.toLowerCase())
+    (p.productName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.sku_code || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -112,13 +124,21 @@ const ProductListScreen = ({ navigation, route }) => {
         </View>
 
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {filteredProducts.map((product) => (
+          {loading && products.length === 0 ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color="#087E66" />
+              <Text style={styles.loadingText}>Loading products...</Text>
+            </View>
+          ) : filteredProducts.map((product) => (
             <View key={product.productId} style={styles.card}>
               <View style={styles.cardLeft}>
                 <View style={styles.productIconContainer}>
                   <Text style={styles.productIcon}>💧</Text>
                 </View>
-                <Text style={styles.name} numberOfLines={2}>{product.productName}</Text>
+                <View style={styles.productMeta}>
+                  <Text style={styles.name} numberOfLines={2}>{product.productName}</Text>
+                  {product.sku_code ? <Text style={styles.sku}>SKU: {product.sku_code}</Text> : null}
+                </View>
               </View>
 
               <View style={styles.cardRight}>
@@ -129,7 +149,7 @@ const ProductListScreen = ({ navigation, route }) => {
                 <View style={[styles.statusDot, product.status === 'Active' ? styles.statusActiveDot : styles.statusInactiveDot]} />
                 <TouchableOpacity
                   style={styles.actionEditBtn}
-                  onPress={() => navigation.navigate('AddProduct', { product })}
+                  onPress={() => navigation.navigate('AddProduct', { product, categoryId: category.categoryId })}
                 >
                   <Text style={styles.actionEditIcon}>✎</Text>
                 </TouchableOpacity>
@@ -137,7 +157,7 @@ const ProductListScreen = ({ navigation, route }) => {
             </View>
           ))}
 
-          {filteredProducts.length === 0 && (
+          {!loading && filteredProducts.length === 0 && (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>📦</Text>
               <Text style={styles.emptyText}>No products found</Text>
@@ -354,6 +374,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#94A3B8',
+  },
+  centerContainer: {
+    paddingVertical: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
   },
 });
 

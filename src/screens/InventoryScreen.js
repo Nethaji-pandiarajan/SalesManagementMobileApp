@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,73 +8,82 @@ import {
   StatusBar,
   TextInput,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
+import CONFIG from '../config/config';
 
 const { width } = Dimensions.get('window');
 
 const InventoryScreen = ({ navigation, route }) => {
-  const { username } = route.params || { username: 'Admin' };
+  const { username } = route.params || { username: 'Driver' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [inventoryData, setInventoryData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [expandedCategories, setExpandedCategories] = useState({});
 
-  // Structured Data based on user request
-  const inventoryCategories = [
-    {
-      categoryName: 'Jo gold chekku gingelly oil',
-      items: [
-        { id: 'JG-G-1L-B', name: '1 ltr bottle', stock: 120, price: 180 },
-        { id: 'JG-G-500-B', name: '500 ml bottle', stock: 240, price: 95 },
-        { id: 'JG-G-200-B', name: '200 ml bottle', stock: 150, price: 40 },
-        { id: 'JG-G-100-B', name: '100 ml bottle', stock: 100, price: 22 },
-        { id: 'JG-G-1L-P', name: '1 ltr pouch', stock: 50, price: 175 },
-        { id: 'JG-G-500-P', name: '500 ml pouch', stock: 80, price: 90 },
-        { id: 'JG-G-100-P', name: '100 ml pouch', stock: 120, price: 20 },
-        { id: 'JG-G-50-P', name: '50 ml pouch', stock: 200, price: 12 },
-        { id: 'JG-G-5L-C', name: '5 ltr can', stock: 30, price: 850 },
-        { id: 'JG-G-15K-T', name: '15 kg Tin', stock: 15, price: 2500 },
-        { id: 'JG-G-40K-OC', name: '40 kg oil cake', stock: 10, price: 1200 },
-        { id: 'JG-G-50K-OC', name: '50 kg oil cake', stock: 5, price: 1500 },
-        { id: 'JG-G-40K-GOC', name: '40 kg grinded oil cake', stock: 8, price: 1300 },
-        { id: 'JG-G-50K-GOC', name: '50 kg grinded oil cake', stock: 4, price: 1600 },
-      ]
-    },
-    {
-      categoryName: 'Sri Lakshmi chekku gingelly oil',
-      items: [
-        { id: 'SL-G-1L-B', name: '1 ltr bottle', stock: 80, price: 170 },
-        { id: 'SL-G-500-B', name: '500 ml bottle', stock: 150, price: 85 },
-        { id: 'SL-G-5L-C', name: '5 ltr can', stock: 20, price: 800 },
-        { id: 'SL-G-15K-T', name: '15 kg Tin', stock: 10, price: 2400 },
-      ]
-    },
-    {
-      categoryName: 'Jo gold chekku groundnut oil',
-      items: [
-        { id: 'JG-GN-1L-B', name: '1 ltr bottle', stock: 100, price: 160 },
-        { id: 'JG-GN-500-B', name: '500 ml bottle', stock: 180, price: 85 },
-        { id: 'JG-GN-5L-C', name: '5 ltr can', stock: 25, price: 780 },
-        { id: 'JG-GN-15K-T', name: '15 kg Tin', stock: 12, price: 2300 },
-        { id: 'JG-GN-50K-OC', name: '50 kg oil cake', stock: 6, price: 1400 },
-      ]
-    },
-    {
-      categoryName: 'Maha gold deepam oil',
-      items: [
-        { id: 'MG-D-1L-B', name: '1 ltr bottle', stock: 200, price: 120 },
-        { id: 'MG-D-500-B', name: '500 ml bottle', stock: 300, price: 65 },
-        { id: 'MG-D-200-B', name: '200 ml bottle', stock: 150, price: 30 },
-        { id: 'MG-D-100-B', name: '100 ml bottle', stock: 100, price: 18 },
-        { id: 'MG-D-15K-T', name: '15 kg Tin', stock: 20, price: 1800 },
-      ]
+  const fetchInventory = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
+      const backendUrl = CONFIG.API_BASE_URL;
+      const response = await fetch(`${backendUrl}/api/vehicle/inventory`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setInventoryData(data);
+      } else {
+        setError(data.error || 'Failed to fetch inventory.');
+      }
+    } catch (err) {
+      console.error('Fetch inventory error:', err);
+      setError('Network error. Make sure the backend server is running.');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const [expandedCategories, setExpandedCategories] = useState(
-    inventoryCategories.reduce((acc, cat) => ({ ...acc, [cat.categoryName]: true }), {})
-  );
+  useEffect(() => {
+    fetchInventory();
+
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchInventory();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
+    if (inventoryData?.categories) {
+      setExpandedCategories(prev => {
+        const next = { ...prev };
+        inventoryData.categories.forEach(cat => {
+          if (next[cat.category_name] === undefined) {
+            next[cat.category_name] = true;
+          }
+        });
+        return next;
+      });
+    }
+  }, [inventoryData]);
 
   const toggleCategory = (categoryName) => {
     setExpandedCategories(prev => ({
@@ -83,21 +92,29 @@ const InventoryScreen = ({ navigation, route }) => {
     }));
   };
 
-  const filteredInventory = useMemo(() => {
-    if (!searchQuery.trim()) return inventoryCategories;
-    return inventoryCategories.map(cat => {
-      const isCatMatch = cat.categoryName.toLowerCase().includes(searchQuery.toLowerCase());
-      if (isCatMatch) return cat; // If category matches, show all items
+  const filteredCategories = useMemo(() => {
+    if (!inventoryData?.categories) return [];
+    if (!searchQuery.trim()) return inventoryData.categories;
+
+    return inventoryData.categories.map(cat => {
+      const isCatMatch = cat.category_name.toLowerCase().includes(searchQuery.toLowerCase());
+      if (isCatMatch) return cat;
+      
+      const matchedProducts = cat.products.filter(prod => 
+        prod.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (prod.sku_code && prod.sku_code.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+      
       return {
         ...cat,
-        items: cat.items.filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        products: matchedProducts
       };
-    }).filter(cat => cat.items.length > 0);
-  }, [searchQuery]);
+    }).filter(cat => cat.products.length > 0);
+  }, [inventoryData, searchQuery]);
 
   const totalItemsCount = useMemo(() => {
-    return filteredInventory.reduce((acc, cat) => acc + cat.items.length, 0);
-  }, [filteredInventory]);
+    return filteredCategories.reduce((acc, cat) => acc + cat.products.length, 0);
+  }, [filteredCategories]);
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -123,72 +140,125 @@ const InventoryScreen = ({ navigation, route }) => {
           <Text style={styles.headerTitle}>VEHICLE INVENTORY</Text>
         </View>
 
-        <View style={styles.headerRight} />
+        <TouchableOpacity style={styles.profileBtn} onPress={fetchInventory}>
+          <Text style={styles.profileIcon}>🔄</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search categories or items..."
-            placeholderTextColor="#94A3B8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#087E66" />
+          <Text style={styles.loadingText}>Loading vehicle inventory...</Text>
         </View>
-
-        <View style={styles.infoBanner}>
-          <Text style={styles.infoText}>🚛 Currently loaded in Van</Text>
-          <Text style={styles.itemCount}>{totalItemsCount} Items</Text>
+      ) : error ? (
+        <View style={styles.errorContent}>
+          <View style={styles.errorCard}>
+            <Text style={styles.errorIcon}>🚚</Text>
+            <Text style={styles.errorTitle}>Trip Status</Text>
+            <Text style={styles.errorText}>
+              {error.includes('No active trip')
+                ? 'You do not have any active trip or vehicle assigned at the moment. Please contact your supervisor to assign a trip.'
+                : error}
+            </Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={fetchInventory} activeOpacity={0.8}>
+              <Text style={styles.retryBtnText}>Retry / Refresh</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-        >
-          {filteredInventory.map((category, index) => (
-            <View key={index} style={styles.categorySection}>
-              <TouchableOpacity
-                style={styles.categoryHeader}
-                activeOpacity={0.7}
-                onPress={() => toggleCategory(category.categoryName)}
-              >
-                <Text style={styles.categoryTitle}>{category.categoryName}</Text>
-                <Text style={styles.accordionIcon}>
-                  {expandedCategories[category.categoryName] ? '▼' : '▶'}
-                </Text>
-              </TouchableOpacity>
-
-              {expandedCategories[category.categoryName] && category.items.map((item) => (
-                <View key={item.id} style={styles.inventoryCard}>
-                  <View style={styles.cardMain}>
-                    <View style={styles.productInfo}>
-                      <Text style={styles.productName}>{item.name}</Text>
-                      <Text style={styles.skuText}>Rate: ₹{item.price}</Text>
-                    </View>
-                    <View style={styles.stockInfo}>
-                      <Text style={styles.stockQty}>{item.stock} units</Text>
-                      <Text style={styles.totalValue}>
-                        ₹{(item.price * item.stock).toLocaleString()}
-                      </Text>
-                    </View>
-                  </View>
+      ) : (
+        <View style={styles.content}>
+          {/* Vehicle Info Card */}
+          {inventoryData?.vehicle && (
+            <View style={styles.vehicleInfoCard}>
+              <View style={styles.vehicleInfoRow}>
+                <View>
+                  <Text style={styles.vehicleNoText}>{inventoryData.vehicle.vehicle_no}</Text>
+                  <Text style={styles.vehicleNameText}>{inventoryData.vehicle.vehicle_name || 'Assigned Vehicle'}</Text>
                 </View>
-              ))}
-            </View>
-          ))}
-
-          {filteredInventory.length === 0 && (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📦</Text>
-              <Text style={styles.emptyText}>No items found in inventory</Text>
+                <View style={styles.dateBadge}>
+                  <Text style={styles.dateLabelText}>Trip Date</Text>
+                  <Text style={styles.dateValText}>
+                    {inventoryData.date ? new Date(inventoryData.date).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    }) : 'Today'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.vehicleInfoFooter}>
+                <Text style={styles.totalValueLabel}>Total Manifest Value:</Text>
+                <Text style={styles.totalValueAmount}>₹{inventoryData.grand_total_value?.toLocaleString('en-IN') || '0'}</Text>
+              </View>
             </View>
           )}
-        </ScrollView>
-      </View>
+
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search categories or products..."
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          <View style={styles.infoBanner}>
+            <Text style={styles.infoText}>📦 Loaded Stock Manifest</Text>
+            <Text style={styles.itemCount}>{totalItemsCount} Products</Text>
+          </View>
+
+          <ScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContainer}
+          >
+            {filteredCategories.map((category, index) => (
+              <View key={category.category_id || index} style={styles.categorySection}>
+                <TouchableOpacity
+                  style={styles.categoryHeader}
+                  activeOpacity={0.7}
+                  onPress={() => toggleCategory(category.category_name)}
+                >
+                  <Text style={styles.categoryTitle}>{category.category_name}</Text>
+                  <Text style={styles.accordionIcon}>
+                    {expandedCategories[category.category_name] ? '▼' : '▶'}
+                  </Text>
+                </TouchableOpacity>
+
+                {expandedCategories[category.category_name] && category.products.map((item) => (
+                  <View key={item.product_id} style={styles.inventoryCard}>
+                    <View style={styles.cardMain}>
+                      <View style={styles.productInfo}>
+                        <Text style={styles.productName}>{item.product_name}</Text>
+                        <View style={styles.metaRow}>
+                          {item.sku_code ? <Text style={styles.skuText}>{item.sku_code} • </Text> : null}
+                          <Text style={styles.skuText}>Rate: ₹{item.rate} / {item.unit || 'unit'}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.stockInfo}>
+                        <Text style={styles.stockQty}>{item.quantity_loaded} {item.unit || 'units'}</Text>
+                        <Text style={styles.totalValue}>
+                          ₹{(item.total_price || (item.rate * item.quantity_loaded)).toLocaleString('en-IN')}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ))}
+
+            {filteredCategories.length === 0 && (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>📦</Text>
+                <Text style={styles.emptyText}>No matching products found</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      )}
 
       <BottomNav navigation={navigation} currentRoute="Inventory" />
     </SafeAreaView>
@@ -238,12 +308,149 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     letterSpacing: 1,
   },
-  headerRight: {
+  profileBtn: {
     width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileIcon: {
+    fontSize: 16,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  errorContent: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  errorCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  retryBtn: {
+    backgroundColor: '#087E66',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    shadowColor: '#087E66',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  retryBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   content: {
     flex: 1,
     padding: 16,
+  },
+  vehicleInfoCard: {
+    backgroundColor: '#087E66',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#087E66',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  vehicleInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.15)',
+    paddingBottom: 12,
+    marginBottom: 12,
+  },
+  vehicleNoText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  vehicleNameText: {
+    fontSize: 13,
+    color: '#A7F3D0',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  dateBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  dateLabelText: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#A7F3D0',
+    textTransform: 'uppercase',
+  },
+  dateValText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 2,
+  },
+  vehicleInfoFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalValueLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#A7F3D0',
+  },
+  totalValueAmount: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -273,12 +480,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   infoText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#64748B',
   },
   itemCount: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: '#087E66',
     backgroundColor: '#E6F2F0',
@@ -288,7 +495,7 @@ const styles = StyleSheet.create({
   },
   listContainer: { paddingHorizontal: 0, paddingBottom: 20 },
   categorySection: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   categoryHeader: {
     flexDirection: 'row',
@@ -298,17 +505,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 8,
     borderLeftWidth: 4,
     borderLeftColor: '#087E66',
   },
   accordionIcon: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#087E66',
     fontWeight: '800',
   },
   categoryTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: '#087E66',
     textTransform: 'uppercase',
@@ -317,14 +524,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 10,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 1.5,
   },
   cardMain: {
     flexDirection: 'row',
@@ -333,15 +540,20 @@ const styles = StyleSheet.create({
   },
   productInfo: {
     flex: 1,
+    paddingRight: 8,
   },
   productName: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#1E293B',
     marginBottom: 4,
   },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   skuText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#94A3B8',
   },
@@ -349,28 +561,28 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   stockQty: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 4,
   },
   totalValue: {
-    fontSize: 15,
-    fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '800',
     color: '#087E66',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 60,
+    marginTop: 40,
   },
   emptyIcon: {
-    fontSize: 48,
-    marginBottom: 15,
+    fontSize: 40,
+    marginBottom: 12,
     opacity: 0.3,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#94A3B8',
   },

@@ -10,6 +10,8 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../config/config';
 
 const AddProductScreen = ({ navigation, route }) => {
   const { categoryId, product } = route.params || {};
@@ -21,39 +23,71 @@ const AddProductScreen = ({ navigation, route }) => {
   const [rate, setRate] = useState(product ? product.rate.toString() : '');
   const [status, setStatus] = useState(product ? product.status : 'Active');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!productName || !skuCode || !rate) {
       Alert.alert('Error', 'Please fill in Name, SKU, and Rate.');
       return;
     }
 
-    if (product) {
-      console.log('Updating product:', { ...product, productName, sku_code: skuCode, description, unit, rate: parseFloat(rate), status });
-      Alert.alert('Success', 'Product updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    } else {
-      const newProductData = {
-        productId: Math.random().toString(36).substr(2, 9),
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Error', 'Session expired. Please log in again.');
+        return;
+      }
+
+      const bodyData = {
         sku_code: skuCode,
-        productName,
-        description,
-        categoryId,
-        unit,
+        product_name: productName,
+        description: description,
+        category_id: Number(categoryId || product?.categoryId),
+        unit: unit,
         rate: parseFloat(rate),
-        status,
-        createdOn: new Date().toISOString(),
-        updatedOn: new Date().toISOString(),
-        createdBy: 'currentUser',
-        updatedBy: 'currentUser',
-        orgId: 'org123',
+        status: status === 'Active' ? 'ACTIVE' : 'INACTIVE',
       };
 
-      console.log('Saving new product:', newProductData);
+      if (product) {
+        // PUT request to update
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/products/${product.productId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(bodyData),
+        });
 
-      Alert.alert('Success', 'Product added successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+        const data = await response.json();
+        if (response.ok) {
+          Alert.alert('Success', 'Product updated successfully!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        } else {
+          Alert.alert('Error', data.error || 'Failed to update product.');
+        }
+      } else {
+        // POST request to create
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/products`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(bodyData),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          Alert.alert('Success', 'Product added successfully!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        } else {
+          Alert.alert('Error', data.error || 'Failed to add product.');
+        }
+      }
+    } catch (err) {
+      console.error('Save product error:', err);
+      Alert.alert('Error', 'Network error. Failed to save product.');
     }
   };
 

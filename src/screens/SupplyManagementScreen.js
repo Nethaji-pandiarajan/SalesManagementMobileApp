@@ -9,12 +9,17 @@ import {
   TextInput,
   Modal,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Sidebar from '../components/Sidebar';
 import { globalUsersList } from './UserListScreen';
 import { globalVehiclesList } from './VehicleListScreen';
+import BottomNav from '../components/BottomNav';
+import CONFIG from '../config/config';
+import { getStoredToken } from '../services/vehicleService';
+
 
 // Custom universal red trash can icon
 const RedTrashIcon = () => (
@@ -36,36 +41,6 @@ const DEFAULT_OIL_TYPES = [
   { id: '4', name: 'Maha Gold Deepam Oil', defaultQty: '0' },
 ];
 
-// Initial mock load sheet records
-const INITIAL_SUPPLY_RECORDS = [
-  {
-    supply_id: 1,
-    date: '2026-05-21',
-    vehicle_id: '1', // Tata Ace
-    user_id: 2, // Thiru
-    areas_covered: 'Adyar, Velachery',
-    oils: {
-      '1': '50',
-      '2': '40',
-      '3': '60',
-      '4': '10',
-    },
-  },
-  {
-    supply_id: 2,
-    date: '2026-05-20',
-    vehicle_id: '2', // Mahindra Bolero
-    user_id: 2, // Thiru
-    areas_covered: 'Tambaram, Chrompet',
-    oils: {
-      '1': '30',
-      '2': '20',
-      '3': '40',
-      '4': '15',
-    },
-  },
-];
-
 const SupplyManagementScreen = ({ navigation, route }) => {
   const { username } = route.params || { username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -74,41 +49,27 @@ const SupplyManagementScreen = ({ navigation, route }) => {
   // Active Tab
   const [activeTab, setActiveTab] = useState('plans'); // 'plans' or 'monitor'
 
-  // Lists synced from global memory
+  // Lists synced from database
   const [executives, setExecutives] = useState([]);
   const [vehicles, setVehicles] = useState([]);
-  const [records, setRecords] = useState(INITIAL_SUPPLY_RECORDS);
+  const [records, setRecords] = useState([]);
+  const [tripInvoices, setTripInvoices] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [oilTypes, setOilTypes] = useState(DEFAULT_OIL_TYPES);
+  const [areasList, setAreasList] = useState([]);
 
-  // Mock initial invoices for active trips
-  const [tripInvoices] = useState([
-    {
-      invoice_id: 101,
-      supply_id: 1, // Daily plan 1
-      shopName: 'City Supermarket',
-      time: '10:30 AM',
-      oil_id: '1', // Jo Gold Chekku Gingelly Oil
-      qty: 15,
-      value: 2700, // 15 * 180
-    },
-    {
-      invoice_id: 102,
-      supply_id: 1,
-      shopName: 'Reliable Stores',
-      time: '01:45 PM',
-      oil_id: '3', // Jo Gold Chekku Groundnut Oil
-      qty: 25,
-      value: 4000, // 25 * 160
-    },
-    {
-      invoice_id: 103,
-      supply_id: 2, // Daily plan 2
-      shopName: 'Green Grocers',
-      time: '11:15 AM',
-      oil_id: '2', // Sri Lakshmi Chekku Gingelly Oil
-      qty: 10,
-      value: 1700, // 10 * 170
-    },
-  ]);
+  const toggleAreaSelection = (areaId) => {
+    const selectedIds = formAreas ? formAreas.split(',').filter(Boolean) : [];
+    const idStr = String(areaId);
+    let newIds;
+    if (selectedIds.includes(idStr)) {
+      newIds = selectedIds.filter(id => id !== idStr);
+    } else {
+      newIds = [...selectedIds, idStr];
+    }
+    setFormAreas(newIds.join(','));
+  };
 
   // Modal / Plan Creator State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -135,22 +96,98 @@ const SupplyManagementScreen = ({ navigation, route }) => {
   const [showUserPicker, setShowUserPicker] = useState(false);
 
   // Sync users/vehicles when focused
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await getStoredToken();
+      if (!token) {
+        setError('No authentication token found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
+      // 1. Fetch active users/executives
+      const usersResponse = await fetch(`${CONFIG.API_BASE_URL}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const usersData = await usersResponse.json();
+      if (usersResponse.ok) {
+        const activeUsers = usersData.filter(u => (u.status || '').toUpperCase() === 'ACTIVE' && (u.role_id === 2 || (u.role_name || '').toLowerCase() === 'sales executive'));
+        setExecutives(activeUsers);
+      }
+
+      // 2. Fetch active vehicles
+      const vehiclesResponse = await fetch(`${CONFIG.API_BASE_URL}/api/vehicles`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const vehiclesData = await vehiclesResponse.json();
+      if (vehiclesResponse.ok) {
+        const vList = Array.isArray(vehiclesData.vehicles) ? vehiclesData.vehicles : Array.isArray(vehiclesData) ? vehiclesData : [];
+        const activeVehicles = vList.filter(v => (v.status || v.vehicle_status || '').toUpperCase() === 'ACTIVE');
+        setVehicles(activeVehicles);
+      }
+
+      // 3. Fetch products to build load sheet columns
+      const productsResponse = await fetch(`${CONFIG.API_BASE_URL}/api/products`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (productsResponse.ok) {
+        const categories = await productsResponse.json();
+        const flatProducts = Array.isArray(categories) 
+          ? categories.flatMap(c => c.products || []) 
+          : [];
+        if (flatProducts.length > 0) {
+          const formattedOils = flatProducts.map(p => ({
+            id: p.product_id.toString(),
+            name: p.product_name,
+            defaultQty: '0'
+          }));
+          setOilTypes(formattedOils);
+        }
+      }
+
+      // 4. Fetch areas
+      const areasResponse = await fetch(`${CONFIG.API_BASE_URL}/api/areas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const areasData = await areasResponse.json();
+      if (areasResponse.ok) {
+        setAreasList(areasData || []);
+      }
+
+      // 5. Fetch supply plans & invoices
+      const supplyResponse = await fetch(`${CONFIG.API_BASE_URL}/api/admin/supply`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const supplyData = await supplyResponse.json();
+      if (supplyResponse.ok) {
+        setRecords(supplyData.records || []);
+        setTripInvoices(supplyData.invoices || []);
+      }
+    } catch (err) {
+      console.error('Fetch data error:', err);
+      setError('Network error. Make sure the backend server is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
-      const activeUsers = globalUsersList.filter(u => u.status === 'ACTIVE' && u.role_id === 2);
-      const activeVehicles = globalVehiclesList.filter(v => v.status === 'Active');
-      setExecutives(activeUsers);
-      setVehicles(activeVehicles);
+      fetchData();
     }, [])
   );
 
   const getVehicleInfo = (id) => {
-    const v = globalVehiclesList.find(item => item.vehicleId === id);
-    return v ? `${v.VehicleName} (${v.vehicleNo})` : 'Unknown Vehicle';
+    const v = vehicles.find(item => String(item.vehicle_id || item.vehicleId || '') === String(id)) || 
+              globalVehiclesList.find(item => String(item.vehicle_id || item.vehicleId || '') === String(id));
+    return v ? `${v.vehicle_name || v.VehicleName} (${v.vehicle_no || v.vehicleNo})` : 'Unknown Vehicle';
   };
 
   const getUserInfo = (id) => {
-    const u = globalUsersList.find(item => item.user_id === Number(id));
+    const u = executives.find(item => item.user_id === Number(id)) || 
+              globalUsersList.find(item => item.user_id === Number(id));
     return u ? u.username : 'Unknown Executive';
   };
 
@@ -158,15 +195,14 @@ const SupplyManagementScreen = ({ navigation, route }) => {
   const handleOpenAdd = () => {
     const today = new Date().toISOString().split('T')[0];
     setFormDate(today);
-    setSelectedVehicleId(vehicles.length > 0 ? vehicles[0].vehicleId : '');
+    setSelectedVehicleId(vehicles.length > 0 ? String(vehicles[0].vehicle_id || vehicles[0].vehicleId) : '');
     setSelectedUserId(executives.length > 0 ? String(executives[0].user_id) : '');
     setFormAreas('');
-    setFormOils({
-      '1': '0',
-      '2': '0',
-      '3': '0',
-      '4': '0',
+    const initialOils = {};
+    oilTypes.forEach(oil => {
+      initialOils[oil.id] = '0';
     });
+    setFormOils(initialOils);
     setSelectedRecordId(null);
     setIsModalOpen(true);
   };
@@ -174,7 +210,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
   // Open Form for Editing Existing Record
   const handleOpenEdit = (record) => {
     setFormDate(record.date);
-    setSelectedVehicleId(record.vehicle_id);
+    setSelectedVehicleId(String(record.vehicle_id));
     setSelectedUserId(String(record.user_id));
     setFormAreas(record.areas_covered);
     setFormOils({ ...record.oils });
@@ -191,7 +227,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formDate.trim()) {
       Alert.alert('Error', 'Please enter a valid date.');
       return;
@@ -209,36 +245,50 @@ const SupplyManagementScreen = ({ navigation, route }) => {
       return;
     }
 
-    if (selectedRecordId) {
-      // Edit
-      setRecords(prev => prev.map(rec => {
-        if (rec.supply_id === selectedRecordId) {
-          return {
-            ...rec,
-            date: formDate,
-            vehicle_id: selectedVehicleId,
-            user_id: Number(selectedUserId),
-            areas_covered: formAreas,
-            oils: { ...formOils },
-          };
-        }
-        return rec;
-      }));
-      Alert.alert('Success', 'Plan updated successfully!');
-    } else {
-      // Add
-      const newRecord = {
-        supply_id: Math.max(...records.map(r => r.supply_id), 0) + 1,
+    setLoading(true);
+    try {
+      const token = await getStoredToken();
+      if (!token) {
+        Alert.alert('Error', 'No authentication token found. Please log in again.');
+        return;
+      }
+
+      const payload = {
         date: formDate,
-        vehicle_id: selectedVehicleId,
-        user_id: Number(selectedUserId),
+        vehicle_id: parseInt(selectedVehicleId, 10),
+        user_id: parseInt(selectedUserId, 10),
         areas_covered: formAreas,
-        oils: { ...formOils },
+        oils: formOils,
       };
-      setRecords(prev => [newRecord, ...prev]);
-      Alert.alert('Success', 'Daily Plan & Load Sheet created successfully!');
+
+      const url = selectedRecordId
+        ? `${CONFIG.API_BASE_URL}/api/admin/supply/${selectedRecordId}`
+        : `${CONFIG.API_BASE_URL}/api/admin/supply`;
+
+      const method = selectedRecordId ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert('Success', selectedRecordId ? 'Plan updated successfully!' : 'Daily Plan & Load Sheet created successfully!');
+        setIsModalOpen(false);
+        await fetchData();
+      } else {
+        Alert.alert('Error', data.error || 'Failed to save supply record.');
+      }
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to save supply record.');
+    } finally {
+      setLoading(false);
     }
-    setIsModalOpen(false);
   };
 
   const handleDelete = (id) => {
@@ -250,8 +300,31 @@ const SupplyManagementScreen = ({ navigation, route }) => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            setRecords(prev => prev.filter(rec => rec.supply_id !== id));
+          onPress: async () => {
+            try {
+              const token = await getStoredToken();
+              if (!token) {
+                Alert.alert('Error', 'No authentication token found. Please log in again.');
+                return;
+              }
+
+              const response = await fetch(`${CONFIG.API_BASE_URL}/api/admin/supply/${id}`, {
+                method: 'DELETE',
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+
+              const data = await response.json();
+              if (response.ok) {
+                Alert.alert('Success', 'Plan deleted successfully!');
+                await fetchData();
+              } else {
+                Alert.alert('Error', data.error || 'Failed to delete plan.');
+              }
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to delete plan.');
+            }
           },
         },
       ]
@@ -261,7 +334,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
   const filteredRecords = records.filter(rec => {
     const driverName = getUserInfo(rec.user_id).toLowerCase();
     const vehicleInfo = getVehicleInfo(rec.vehicle_id).toLowerCase();
-    const areas = rec.areas_covered.toLowerCase();
+    const areas = (rec.area_names || rec.areas_covered || '').toLowerCase();
     const date = rec.date;
     const query = searchQuery.toLowerCase();
 
@@ -340,7 +413,18 @@ const SupplyManagementScreen = ({ navigation, route }) => {
       </View>
 
       <View style={styles.content}>
-        {/* Navigation Tabs */}
+        {error && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{error}</Text>
+          </View>
+        )}
+        {loading && records.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#087E66" />
+          </View>
+        ) : (
+          <>
+            {/* Navigation Tabs */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'plans' && styles.activeTabButton]}
@@ -456,7 +540,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                       </View>
                       <View style={styles.cardDetail}>
                         <Text style={styles.detailLabel}>Areas:</Text>
-                        <Text style={styles.detailValue}>{rec.areas_covered}</Text>
+                        <Text style={styles.detailValue}>{rec.area_names || rec.areas_covered}</Text>
                       </View>
 
                       <View style={styles.divider} />
@@ -464,7 +548,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                       {/* Load Sheet Section */}
                       <Text style={styles.loadSheetTitle}>Morning Load Sheet (Liters/Units)</Text>
                       <View style={styles.oilGrid}>
-                        {DEFAULT_OIL_TYPES.map(oil => {
+                        {oilTypes.map(oil => {
                           const qty = rec.oils[oil.id] || '0';
                           return (
                             <View key={oil.id} style={styles.oilGridItem}>
@@ -528,7 +612,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                         </View>
                         <View style={styles.cardDetail}>
                           <Text style={styles.detailLabel}>Areas:</Text>
-                          <Text style={styles.detailValue}>{rec.areas_covered}</Text>
+                          <Text style={styles.detailValue}>{rec.area_names || rec.areas_covered}</Text>
                         </View>
 
                         <View style={styles.divider} />
@@ -566,11 +650,11 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                             <Text style={styles.emptyFeedText}>No invoices submitted yet today.</Text>
                           </View>
                         ) : (
-                          invoices.map(inv => {
-                            const oilType = DEFAULT_OIL_TYPES.find(o => o.id === inv.oil_id);
+                          invoices.map((inv, idx) => {
+                            const oilType = oilTypes.find(o => o.id === inv.oil_id);
                             const oilName = oilType ? oilType.name : 'Oil';
                             return (
-                              <View key={inv.invoice_id} style={styles.invoiceItem}>
+                              <View key={`${inv.invoice_id}-${inv.oil_id}-${idx}`} style={styles.invoiceItem}>
                                 <View style={styles.flex1}>
                                   <View style={styles.invoiceHeaderRow}>
                                     <Text style={styles.invoiceShopName}>{inv.shopName}</Text>
@@ -594,6 +678,8 @@ const SupplyManagementScreen = ({ navigation, route }) => {
               ))
             )}
           </ScrollView>
+        )}
+          </>
         )}
       </View>
 
@@ -643,20 +729,25 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                   </TouchableOpacity>
                   {showVehiclePicker && (
                     <View style={styles.pickerDropdown}>
-                      {vehicles.map(v => (
-                        <TouchableOpacity
-                          key={v.vehicleId}
-                          style={styles.pickerOption}
-                          onPress={() => {
-                            setSelectedVehicleId(v.vehicleId);
-                            setShowVehiclePicker(false);
-                          }}
-                        >
-                          <Text style={styles.pickerOptionText}>
-                            {v.VehicleName} ({v.vehicleNo})
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
+                      {vehicles.map(v => {
+                        const vId = String(v.vehicle_id || v.vehicleId);
+                        const vName = v.vehicle_name || v.VehicleName || '';
+                        const vNo = v.vehicle_no || v.vehicleNo || '';
+                        return (
+                          <TouchableOpacity
+                            key={vId}
+                            style={styles.pickerOption}
+                            onPress={() => {
+                              setSelectedVehicleId(vId);
+                              setShowVehiclePicker(false);
+                            }}
+                          >
+                            <Text style={styles.pickerOptionText}>
+                              {vName} ({vNo})
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
                   )}
                 </View>
@@ -695,14 +786,33 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Areas Covered</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Adyar, Velachery, T. Nagar"
-                    placeholderTextColor="#94A3B8"
-                    value={formAreas}
-                    onChangeText={setFormAreas}
-                  />
+                  <Text style={styles.label}>Select Areas Covered</Text>
+                  {areasList.length === 0 ? (
+                    <Text style={styles.emptyAreasText}>No active areas found.</Text>
+                  ) : (
+                    <View style={styles.areasSelectGrid}>
+                      {areasList.map(area => {
+                        const isSelected = (formAreas ? formAreas.split(',').filter(Boolean) : []).includes(String(area.area_id));
+                        return (
+                          <TouchableOpacity
+                            key={area.area_id}
+                            style={[
+                              styles.areaChip,
+                              isSelected && styles.areaChipSelected
+                            ]}
+                            onPress={() => toggleAreaSelection(area.area_id)}
+                          >
+                            <Text style={[
+                              styles.areaChipText,
+                              isSelected && styles.areaChipTextSelected
+                            ]}>
+                              {area.area_name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -711,7 +821,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                 <Text style={styles.sectionTitle}>Morning Load Sheet Generator</Text>
                 <Text style={styles.sectionSubtitle}>Enter quantities loaded for the 4 oil types:</Text>
 
-                {DEFAULT_OIL_TYPES.map(oil => (
+                {oilTypes.map(oil => (
                   <View key={oil.id} style={styles.oilInputRow}>
                     <Text style={styles.oilInputLabel}>{oil.name}</Text>
                     <TextInput
@@ -736,6 +846,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
         </View>
       </Modal>
 
+      <BottomNav navigation={navigation} currentRoute="SupplyManagement" />
     </SafeAreaView>
   );
 };
@@ -1381,6 +1492,57 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#475569',
     textTransform: 'uppercase',
+  },
+  areasSelectGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  areaChip: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  areaChipSelected: {
+    backgroundColor: '#087E66',
+    borderColor: '#087E66',
+  },
+  areaChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  areaChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  emptyAreasText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  errorBannerText: {
+    color: '#B91C1C',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

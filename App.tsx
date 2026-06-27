@@ -21,17 +21,21 @@ import UserListScreen from './src/screens/UserListScreen';
 import AddUserScreen from './src/screens/AddUserScreen';
 import SupplyManagementScreen from './src/screens/SupplyManagementScreen';
 import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
+import AdminVehicleListScreen from './src/screens/admin/AdminVehicleListScreen';
 import VehicleListScreen from './src/screens/VehicleListScreen';
 import AddVehicleScreen from './src/screens/AddVehicleScreen';
 import CategoryListScreen from './src/screens/CategoryListScreen';
 import AddCategoryScreen from './src/screens/AddCategoryScreen';
 import ProductListScreen from './src/screens/ProductListScreen';
 import AddProductScreen from './src/screens/AddProductScreen';
+import UserSalesAudit from './src/screens/UserSalesAudit';
 
 const Stack = createNativeStackNavigator();
 
 function RootNavigator() {
   const { isLoggedIn, isLoading, userData } = useAuth();
+
+  const isAdmin = userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin';
 
   if (isLoading) {
     return (
@@ -47,14 +51,16 @@ function RootNavigator() {
         {isLoggedIn ? (
           // === APP SCREENS (back button stays within app, never reaches Login) ===
           <>
-            {userData?.role === 'admin' && (
+            {isAdmin ? (
               <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+            ) : (
+              <Stack.Screen
+                name="Dashboard"
+                component={DashboardScreen}
+                initialParams={{ username: userData?.email?.split('@')[0] || 'User' }}
+              />
             )}
-            <Stack.Screen
-              name="Dashboard"
-              component={DashboardScreen}
-              initialParams={{ username: userData?.email?.split('@')[0] || 'User' }}
-            />
+            <Stack.Screen name="AdminVehicleList" component={AdminVehicleListScreen} />
             <Stack.Screen name="Inventory" component={InventoryScreen} />
             <Stack.Screen name="Shops" component={ShopsScreen} />
             <Stack.Screen name="Billing" component={BillingScreen} />
@@ -62,6 +68,7 @@ function RootNavigator() {
             <Stack.Screen name="Sales" component={SalesScreen} />
             <Stack.Screen name="Reports" component={ReportsScreen} />
             <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
+            <Stack.Screen name="UserSalesAudit" component={UserSalesAudit} />
             <Stack.Screen name="Vehicles" component={VehicleListScreen} />
             <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
             {/* Product Management Screens */}
@@ -72,7 +79,7 @@ function RootNavigator() {
 
             {/* Admin Specific Routes */}
             <Stack.Screen name="UserManagement" component={UserListScreen} />
-            <Stack.Screen name="AddUser" component={AddUserScreen} />
+            <Stack.Screen name="AddUser" component={AddUserScreen} initialParams={{ user: null }} />
             <Stack.Screen name="SupplyManagement" component={SupplyManagementScreen} />
             <Stack.Screen name="AdminSalesReports" component={ReportsScreen} />
             <Stack.Screen name="AdminEOD" component={ReconciliationScreen} />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,15 @@ import {
   StatusBar,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Sidebar from '../../components/Sidebar';
 import BottomNav from '../../components/BottomNav';
 import { useAuth } from '../../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../../config/config';
 
 const { width } = Dimensions.get('window');
 
@@ -23,35 +26,26 @@ const REVENUE_DATA = {
   monthly: { sales: '₹12,50,000', collected: '₹11,00,000', pending: '₹1,50,000' },
 };
 
-const VEHICLES = [
-  { id: '1', name: 'TN 38 BX 1234', status: 'On Road', driver: 'Mani' },
-  { id: '2', name: 'TN 38 BX 5678', status: 'Loading', driver: 'Kumar' },
-  { id: '3', name: 'TN 38 CX 9012', status: 'Reconciled', driver: 'Raja' },
-  { id: '4', name: 'TN 38 CX 3456', status: 'On Road', driver: 'Suresh' },
-];
-
-const TOP_SHOPS = [
-  { id: '1', name: 'Sri Murugan Stores', volume: '₹1,25,000', rank: 1 },
-  { id: '2', name: 'Krishna Supermarket', volume: '₹98,000', rank: 2 },
-  { id: '3', name: 'Ganesh Traders', volume: '₹85,000', rank: 3 },
-  { id: '4', name: 'Lakshmi Maligai', volume: '₹72,000', rank: 4 },
-  { id: '5', name: ' बालाजी Provisions', volume: '₹65,000', rank: 5 },
-];
-
 const getStatusColor = (status) => {
   switch (status) {
     case 'On Road': return '#10B981'; // Green
+    case 'Active': return '#3B82F6'; // Blue
+    case 'Inactive': return '#EF4444'; // Red
     case 'Loading': return '#F59E0B'; // Amber
-    case 'Reconciled': return '#3B82F6'; // Blue
+    case 'Reconciled': return '#6366F1'; // Indigo
     default: return '#6B7280'; // Gray
   }
 };
 
 const AdminDashboardScreen = ({ navigation }) => {
-  const [timeframe, setTimeframe] = React.useState('daily');
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const [timeframe, setTimeframe] = useState('daily');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { userData } = useAuth();
   const username = userData?.email?.split('@')[0] || 'Admin';
+
+  const [revenueData, setRevenueData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const currentDate = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
@@ -59,6 +53,92 @@ const AdminDashboardScreen = ({ navigation }) => {
     month: 'long',
     year: 'numeric',
   });
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setError('No authentication token found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
+      const backendUrl = CONFIG.API_BASE_URL;
+      const response = await fetch(`${backendUrl}/api/admin/dashboard-summary`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setRevenueData(data);
+      } else {
+        setError(data.error || 'Failed to fetch dashboard summary.');
+      }
+    } catch (err) {
+      console.error('Fetch admin dashboard summary error:', err);
+      setError('Network error. Make sure the backend server is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const getVehicleStatus = (vehicle) => {
+    if (vehicle.supply_id && vehicle.trip_status === 'OPEN') {
+      return 'On Road';
+    }
+    const stat = (vehicle.vehicle_status || '').toUpperCase();
+    if (stat === 'ACTIVE') {
+      return 'Active';
+    }
+    return 'Inactive';
+  };
+
+  const formatCurrency = (val) => {
+    if (val === undefined || val === null) return '₹0';
+    return `₹${Number(val).toLocaleString('en-IN')}`;
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.menuBtn}
+            onPress={() => setIsSidebarOpen(true)}
+          >
+            <Text style={styles.menuIconText}>☰</Text>
+          </TouchableOpacity>
+
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>JO GOLD</Text>
+          </View>
+
+          <TouchableOpacity style={styles.profileBtn}>
+            <Text style={styles.profileIcon}>{username.charAt(0).toUpperCase()}</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#087E66" />
+          <Text style={styles.loadingText}>Loading dashboard summary...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const currentSales = revenueData ? formatCurrency(revenueData[timeframe]?.sales) : '₹0';
+  const currentCollected = revenueData ? formatCurrency(revenueData[timeframe]?.collected) : '₹0';
+  const currentPending = revenueData ? formatCurrency(revenueData[timeframe]?.pending) : '₹0';
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -84,8 +164,8 @@ const AdminDashboardScreen = ({ navigation }) => {
           <Text style={styles.headerTitle}>JO GOLD</Text>
         </View>
 
-        <TouchableOpacity style={styles.profileBtn}>
-          <Text style={styles.profileIcon}>{username.charAt(0).toUpperCase()}</Text>
+        <TouchableOpacity style={styles.profileBtn} onPress={() => fetchDashboardData()}>
+          <Text style={styles.profileIcon}>🔄</Text>
         </TouchableOpacity>
       </View>
 
@@ -95,6 +175,20 @@ const AdminDashboardScreen = ({ navigation }) => {
           <Text style={styles.welcomeName}>Hello, {username}</Text>
           <Text style={styles.welcomeDate}>Executive Dashboard - {currentDate}</Text>
         </View>
+
+        {/* Error Notice Card */}
+        {error ? (
+          <View style={styles.errorNoticeCard}>
+            <Text style={styles.errorNoticeIcon}>⚠️</Text>
+            <View style={styles.errorNoticeTextContainer}>
+              <Text style={styles.errorNoticeTitle}>Status Warning</Text>
+              <Text style={styles.errorNoticeDesc}>{error}</Text>
+            </View>
+            <TouchableOpacity style={styles.syncBtn} onPress={() => fetchDashboardData()}>
+              <Text style={styles.syncBtnText}>🔄</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Revenue Section */}
         <View style={styles.section}>
@@ -117,16 +211,16 @@ const AdminDashboardScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <Text style={styles.revenueAmount}>{REVENUE_DATA[timeframe].sales}</Text>
+            <Text style={styles.revenueAmount}>{currentSales}</Text>
             <View style={styles.revenueSplit}>
               <View style={styles.splitItem}>
                 <Text style={styles.splitLabel}>Cash Collected</Text>
-                <Text style={styles.splitValueGreen}>{REVENUE_DATA[timeframe].collected}</Text>
+                <Text style={styles.splitValueGreen}>{currentCollected}</Text>
               </View>
               <View style={styles.splitDivider} />
               <View style={styles.splitItem}>
                 <Text style={styles.splitLabel}>Pending</Text>
-                <Text style={styles.splitValueRed}>{REVENUE_DATA[timeframe].pending}</Text>
+                <Text style={styles.splitValueRed}>{currentPending}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -136,35 +230,69 @@ const AdminDashboardScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Live Vehicle Status</Text>
           <View style={styles.vehicleGrid}>
-            {VEHICLES.map((vehicle) => (
-              <View key={vehicle.id} style={styles.vehicleCard}>
-                <View style={styles.vehicleHeader}>
-                  <Text style={styles.vehicleName}>{vehicle.name}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(vehicle.status) + '20' }]}>
-                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(vehicle.status) }]} />
+            {(revenueData?.vehicles || []).map((vehicle) => {
+              const status = getVehicleStatus(vehicle);
+              const isOnRoad = status === 'On Road';
+              return (
+                <View key={vehicle.vehicle_id} style={styles.vehicleCard}>
+                  <View style={styles.vehicleHeader}>
+                    <View style={{ flex: 1, marginRight: 8 }}>
+                      <Text style={styles.vehicleName}>
+                        {vehicle.vehicle_name || 'Unnamed Vehicle'}
+                      </Text>
+                      <Text style={styles.vehicleNoText}>{vehicle.vehicle_no}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) + '15' }]}>
+                      <View style={[styles.statusDot, { backgroundColor: getStatusColor(status) }]} />
+                      <Text style={[styles.statusText, { color: getStatusColor(status) }]}>{status}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.vehicleDetailsRow}>
+                    <Text style={styles.driverLabel}>
+                      👤 Driver: <Text style={styles.driverValue}>{vehicle.driver_name || 'Not Assigned'}</Text>
+                    </Text>
+                    {isOnRoad && vehicle.supply_id && (
+                      <View style={styles.tripBadge}>
+                        <Text style={styles.tripBadgeText}>Trip #{vehicle.supply_id}</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
-                <Text style={styles.driverName}>Driver: {vehicle.driver}</Text>
-              </View>
-            ))}
+              );
+            })}
+            {(revenueData?.vehicles || []).length === 0 && (
+              <Text style={{ textAlign: 'center', color: '#64748B', paddingVertical: 10 }}>No vehicles registered</Text>
+            )}
           </View>
         </View>
-
-
 
         {/* Top 5 Shops */}
         <View style={[styles.section, styles.lastSection]}>
           <Text style={styles.sectionTitle}>Top 5 Shops</Text>
           <View style={styles.shopsContainer}>
-            {TOP_SHOPS.map((shop) => (
-              <View key={shop.id} style={styles.shopRow}>
+            {(revenueData?.top_shops || []).map((shop, index) => (
+              <View key={shop.shop_id || index} style={styles.shopRow}>
                 <View style={styles.rankBadge}>
-                  <Text style={styles.rankText}>#{shop.rank}</Text>
+                  <Text style={styles.rankText}>#{index + 1}</Text>
                 </View>
-                <Text style={styles.shopName} numberOfLines={1}>{shop.name}</Text>
-                <Text style={styles.shopVolume}>{shop.volume}</Text>
+                <View style={styles.shopInfo}>
+                  <Text style={styles.shopName} numberOfLines={1}>{shop.shop_name}</Text>
+                  <Text style={styles.shopDetails} numberOfLines={1}>
+                    👤 {shop.owner_name || 'No Owner'} • 📍 {shop.area_name || 'No Area'}
+                  </Text>
+                </View>
+                <Text style={styles.shopVolume}>{formatCurrency(shop.total_sales)}</Text>
               </View>
             ))}
+            {(revenueData?.top_shops || []).length === 0 && (
+              <Text style={{ textAlign: 'center', color: '#64748B', paddingVertical: 10 }}>No shop transactions recorded yet</Text>
+            )}
+            {revenueData?.top_shops && revenueData.top_shops.length > 0 && (
+              <View style={styles.shopTotalRow}>
+                <Text style={styles.shopTotalLabel}>Top 5 Shops Sales Total</Text>
+                <Text style={styles.shopTotalValue}>{formatCurrency(revenueData.top_shops_sales_sum)}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -406,6 +534,113 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
   },
+  vehicleNoText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  vehicleDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  driverLabel: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  driverValue: {
+    fontWeight: '600',
+    color: '#334155',
+  },
+  tripBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  tripBadgeText: {
+    fontSize: 11,
+    color: '#065F46',
+    fontWeight: '700',
+  },
+  shopInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  shopDetails: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  shopTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    marginTop: 8,
+    borderTopWidth: 1.5,
+    borderTopColor: '#E2E8F0',
+  },
+  shopTotalLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  shopTotalValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#087E66',
+  },
+
+  managementCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    marginBottom: 10,
+  },
+  managementCardLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  managementIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  managementCardText: {
+    flex: 1,
+  },
+  managementCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  managementCardDesc: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  managementCardArrow: {
+    fontSize: 24,
+    color: '#087E66',
+    fontWeight: '600',
+    marginLeft: 10,
+  },
 
   shopsContainer: {
     backgroundColor: '#FFF',
@@ -449,6 +684,65 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#087E66',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  errorNoticeCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  errorNoticeIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  errorNoticeTextContainer: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  errorNoticeTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#991B1B',
+  },
+  errorNoticeDesc: {
+    fontSize: 11,
+    color: '#7F1D1D',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  syncBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#991B1B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1.5,
+  },
+  syncBtnText: {
+    fontSize: 12,
   },
 });
 

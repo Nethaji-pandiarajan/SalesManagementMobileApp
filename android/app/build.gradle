@@ -78,6 +78,11 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.salesmanagementapp"
+    externalNativeBuild {
+        cmake {
+            buildStagingDirectory = "${System.getProperty('user.home')}/cxx"
+        }
+    }
     defaultConfig {
         applicationId "com.salesmanagementapp"
         minSdkVersion rootProject.ext.minSdkVersion

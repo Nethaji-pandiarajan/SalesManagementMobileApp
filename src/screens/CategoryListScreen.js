@@ -8,10 +8,14 @@ import {
   StatusBar,
   TextInput,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../config/config';
 
 const { width } = Dimensions.get('window');
 
@@ -20,16 +24,54 @@ const CategoryListScreen = ({ navigation, route }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mock Data for Categories
-  const [categories, setCategories] = useState([
-    { categoryId: '1', categoryName: 'Jo gold chekku gingelly oil', description: 'Pure cold pressed gingelly oil', status: 'Active' },
-    { categoryId: '2', categoryName: 'Sri Lakshmi chekku gingelly oil', description: 'Traditional chekku gingelly oil', status: 'Active' },
-    { categoryId: '3', categoryName: 'Jo gold chekku groundnut oil', description: 'Pure cold pressed groundnut oil', status: 'Active' },
-    { categoryId: '4', categoryName: 'Maha gold deepam oil', description: 'Premium quality deepam oil', status: 'Active' },
-  ]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchCategories = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setError('No token found');
+        return;
+      }
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/categories`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const mapped = data.map(item => ({
+          categoryId: String(item.category_id),
+          categoryName: item.category_name,
+          description: item.description,
+          status: item.status === 'ACTIVE' ? 'Active' : 'Inactive',
+        }));
+        setCategories(mapped);
+      } else {
+        setError(data.error || 'Failed to fetch categories');
+      }
+    } catch (err) {
+      console.error('Fetch categories error:', err);
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchCategories();
+    }, [])
+  );
 
   const filteredCategories = categories.filter(c =>
-    c.categoryName.toLowerCase().includes(searchQuery.toLowerCase())
+    (c.categoryName || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -78,7 +120,12 @@ const CategoryListScreen = ({ navigation, route }) => {
         </View>
 
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {filteredCategories.map((category) => (
+          {loading && categories.length === 0 ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color="#087E66" />
+              <Text style={styles.loadingText}>Loading categories...</Text>
+            </View>
+          ) : filteredCategories.map((category) => (
             <TouchableOpacity
               key={category.categoryId}
               style={styles.card}
@@ -106,7 +153,7 @@ const CategoryListScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           ))}
 
-          {filteredCategories.length === 0 && (
+          {!loading && filteredCategories.length === 0 && (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>📁</Text>
               <Text style={styles.emptyText}>No categories found</Text>
@@ -301,6 +348,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#94A3B8',
+  },
+  centerContainer: {
+    paddingVertical: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
   },
 });
 

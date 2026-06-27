@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -26,6 +27,8 @@ const VehicleListScreen = ({ navigation, route }) => {
   const { username } = route.params || { username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { userData } = useAuth();
+  const isAdmin = userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin';
 
   // Sync with global runtime memory when screen comes into focus
   const [vehicles, setVehicles] = useState(globalVehiclesList);
@@ -64,12 +67,14 @@ const VehicleListScreen = ({ navigation, route }) => {
           <Text style={styles.headerTitle}>VEHICLES</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.newVehicleBtn}
-          onPress={() => navigation.navigate('AddVehicle')}
-        >
-          <Text style={styles.newVehicleBtnText}>+ New Vehicle</Text>
-        </TouchableOpacity>
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.newVehicleBtn}
+            onPress={() => navigation.navigate('AddVehicle')}
+          >
+            <Text style={styles.newVehicleBtnText}>+ New Vehicle</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.content}>
@@ -106,9 +111,11 @@ const VehicleListScreen = ({ navigation, route }) => {
                 <View style={styles.statusDotContainer}>
                   <View style={[styles.statusDot, vehicle.status === 'Active' ? styles.statusActive : styles.statusInactive]} />
                 </View>
-                <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddVehicle', { vehicle })}>
-                  <Text style={styles.editIcon}>✎</Text>
-                </TouchableOpacity>
+                {isAdmin && (
+                  <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('AddVehicle', { vehicle })}>
+                    <Text style={styles.editIcon}>✎</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </TouchableOpacity>
           ))}

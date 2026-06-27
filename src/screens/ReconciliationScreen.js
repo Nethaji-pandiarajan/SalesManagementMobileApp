@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,131 +8,153 @@ import {
   StatusBar,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-
-const INITIAL_RECONCILIATIONS = [
-  {
-    driverName: 'Thiru',
-    status: 'pending_approval', // 'in_progress', 'pending_approval', 'reconciled'
-    date: '2026-05-21',
-    vehicleNo: 'TN-99-A-1234',
-    inventory: [
-      { id: 'P001', name: 'Jo Gold Gingelly Oil 1L', loaded: 50, sold: 30, expected: 20, actual: '19' },
-      { id: 'P002', name: 'Sri Lakshmi Gingelly Oil 1L', loaded: 40, sold: 25, expected: 15, actual: '15' },
-      { id: 'P003', name: 'Jo Gold Groundnut Oil 1L', loaded: 60, sold: 40, expected: 20, actual: '18' },
-      { id: 'P004', name: 'Jo Gold Coconut Oil 1L', loaded: 10, sold: 5, expected: 5, actual: '5' },
-    ],
-    financials: {
-      expectedCash: 12500,
-      actualCash: 12000,
-      expectedUpi: 9000,
-      actualUpi: 9000,
-    },
-    flaggedDiscrepancies: [],
-  },
-  {
-    driverName: 'Kathir',
-    status: 'in_progress',
-    date: '2026-05-21',
-    vehicleNo: 'TN-45-B-5678',
-    inventory: [
-      { id: 'P001', name: 'Jo Gold Gingelly Oil 1L', loaded: 30, sold: 10, expected: 20, actual: '' },
-      { id: 'P002', name: 'Sri Lakshmi Gingelly Oil 1L', loaded: 20, sold: 10, expected: 10, actual: '' },
-      { id: 'P003', name: 'Jo Gold Groundnut Oil 1L', loaded: 40, sold: 20, expected: 20, actual: '' },
-      { id: 'P004', name: 'Jo Gold Coconut Oil 1L', loaded: 15, sold: 5, expected: 10, actual: '' },
-    ],
-    financials: {
-      expectedCash: 5800,
-      actualCash: 0,
-      expectedUpi: 4000,
-      actualUpi: 0,
-    },
-    flaggedDiscrepancies: [],
-  }
-];
+import CONFIG from '../config/config';
 
 const ReconciliationScreen = ({ navigation, route }) => {
   const { username } = route.params || { username: 'Admin' };
   const { userData } = useAuth();
-  const isAdmin = userData?.role === 'admin';
+  const isAdmin = userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin';
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [reconciliations, setReconciliations] = useState(INITIAL_RECONCILIATIONS);
+  const [reconciliations, setReconciliations] = useState([]);
+  const [activeTrip, setActiveTrip] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedDriver, setSelectedDriver] = useState(null);
 
-  // For driver view
-  const currentDriverName = userData?.username || username || 'Thiru';
-  const driverRequestIndex = reconciliations.findIndex(
-    r => r.driverName.toLowerCase() === currentDriverName.toLowerCase()
-  );
-  const activeRequestIndex = driverRequestIndex !== -1 ? driverRequestIndex : 0;
-  const activeRequest = reconciliations[activeRequestIndex];
+  const fetchData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setError('No authentication token found. Please log in again.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (isAdmin) {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/admin/reconciliation`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setReconciliations(data);
+        } else {
+          setError(data.error || 'Failed to load EOD sheets.');
+        }
+      } else {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/reconciliation/active`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setActiveTrip(data);
+        } else if (response.status === 404) {
+          setActiveTrip(null);
+        } else {
+          setError(data.error || 'Failed to load active trip.');
+        }
+      }
+    } catch (err) {
+      console.error('Fetch reconciliation error:', err);
+      setError('Network error. Unable to load reconciliation data.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   // Helper to handle driver input for stock
   const handleDriverStockChange = (productId, val) => {
-    setReconciliations(prev => prev.map((req, idx) => {
-      if (idx === activeRequestIndex) {
-        return {
-          ...req,
-          inventory: req.inventory.map(item =>
-            item.id === productId ? { ...item, actual: val } : item
-          )
-        };
-      }
-      return req;
+    if (!activeTrip) return;
+    setActiveTrip(prev => ({
+      ...prev,
+      inventory: prev.inventory.map(item =>
+        item.id === productId ? { ...item, actual: val } : item
+      )
     }));
   };
 
   // Helper to handle driver input for cash
   const handleDriverCashChange = (val) => {
+    if (!activeTrip) return;
     const num = parseInt(val, 10) || 0;
-    setReconciliations(prev => prev.map((req, idx) => {
-      if (idx === activeRequestIndex) {
-        return {
-          ...req,
-          financials: { ...req.financials, actualCash: num }
-        };
-      }
-      return req;
+    setActiveTrip(prev => ({
+      ...prev,
+      financials: { ...prev.financials, actualCash: num }
     }));
   };
 
   // Helper to handle driver input for UPI
   const handleDriverUpiChange = (val) => {
+    if (!activeTrip) return;
     const num = parseInt(val, 10) || 0;
-    setReconciliations(prev => prev.map((req, idx) => {
-      if (idx === activeRequestIndex) {
-        return {
-          ...req,
-          financials: { ...req.financials, actualUpi: num }
-        };
-      }
-      return req;
+    setActiveTrip(prev => ({
+      ...prev,
+      financials: { ...prev.financials, actualUpi: num }
     }));
   };
 
   // Driver submits for approval
-  const handleDriverSubmit = () => {
-    const allFilled = activeRequest.inventory.every(item => item.actual !== '');
+  const handleDriverSubmit = async () => {
+    if (!activeTrip) return;
+    const allFilled = activeTrip.inventory.every(item => item.actual !== '');
     if (!allFilled) {
       Alert.alert('Incomplete Sheet', 'Please enter physical counts for all items.');
       return;
     }
 
-    setReconciliations(prev => prev.map((req, idx) => {
-      if (idx === activeRequestIndex) {
-        return {
-          ...req,
-          status: 'pending_approval'
-        };
+    setIsLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/reconciliation/${activeTrip.supply_id}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          actual_cash: activeTrip.financials.actualCash,
+          actual_upi: activeTrip.financials.actualUpi,
+          inventory: activeTrip.inventory.map(item => ({
+            id: item.id,
+            actual: item.actual
+          }))
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert('Success', 'EOD Sheet submitted successfully. Pending Admin review.');
+        fetchData();
+      } else {
+        Alert.alert('Submission Failed', data.error || 'Could not submit reconciliation.');
       }
-      return req;
-    }));
-    Alert.alert('Success', 'EOD Sheet submitted successfully. Pending Admin reconciliation.');
+    } catch (err) {
+      console.error('Submit reconciliation error:', err);
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Admin flags stock discrepancy
@@ -175,41 +197,99 @@ const ReconciliationScreen = ({ navigation, route }) => {
     }));
   };
 
-  // Admin approves reconciliation and closes the day
-  const handleApproveReconciliation = (driverName) => {
+  // Admin flags UPI discrepancy
+  const handleFlagUpiDiscrepancy = (driverName, diff) => {
+    const desc = `UPI Handover: Shortage of ₹${Math.abs(diff)}`;
     setReconciliations(prev => prev.map(req => {
       if (req.driverName === driverName) {
+        if (req.flaggedDiscrepancies.includes(desc)) {
+          return {
+            ...req,
+            flaggedDiscrepancies: req.flaggedDiscrepancies.filter(d => d !== desc)
+          };
+        }
         return {
           ...req,
-          status: 'reconciled'
+          flaggedDiscrepancies: [...req.flaggedDiscrepancies, desc]
         };
       }
       return req;
     }));
-    Alert.alert(
-      'Day Closed',
-      `Reconciliation for ${driverName} approved. The trip is now locked and completed.`,
-      [{ text: 'OK', onPress: () => setSelectedDriver(null) }]
-    );
+  };
+
+  // Admin approves reconciliation and closes the day
+  const handleApproveReconciliation = async (driverName) => {
+    const req = reconciliations.find(r => r.driverName === driverName);
+    if (!req) return;
+
+    setIsLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/admin/reconciliation/${req.supply_id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          flagged_discrepancies: req.flaggedDiscrepancies
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert(
+          'Day Closed',
+          `Reconciliation for ${driverName} approved. The trip is now locked and completed.`,
+          [{ text: 'OK', onPress: () => {
+            setSelectedDriver(null);
+            fetchData();
+          }}]
+        );
+      } else {
+        Alert.alert('Approval Failed', data.error || 'Could not approve reconciliation.');
+      }
+    } catch (err) {
+      console.error('Approve reconciliation error:', err);
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Admin rejects reconciliation and sends it back to driver
-  const handleRejectReconciliation = (driverName) => {
-    setReconciliations(prev => prev.map(req => {
-      if (req.driverName === driverName) {
-        return {
-          ...req,
-          status: 'in_progress',
-          flaggedDiscrepancies: []
-        };
+  const handleRejectReconciliation = async (driverName) => {
+    const req = reconciliations.find(r => r.driverName === driverName);
+    if (!req) return;
+
+    setIsLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/admin/reconciliation/${req.supply_id}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert(
+          'Reconciliation Rejected',
+          `Sent EOD sheet back to ${driverName} for correction.`,
+          [{ text: 'OK', onPress: () => {
+            setSelectedDriver(null);
+            fetchData();
+          }}]
+        );
+      } else {
+        Alert.alert('Rejection Failed', data.error || 'Could not reject reconciliation.');
       }
-      return req;
-    }));
-    Alert.alert(
-      'Reconciliation Rejected',
-      `Sent EOD sheet back to ${driverName} for correction.`,
-      [{ text: 'OK', onPress: () => setSelectedDriver(null) }]
-    );
+    } catch (err) {
+      console.error('Reject reconciliation error:', err);
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -242,369 +322,448 @@ const ReconciliationScreen = ({ navigation, route }) => {
         <View style={styles.headerRight} />
       </View>
 
-      {/* Admin View - List of Drivers */}
-      {isAdmin && !selectedDriver && (
-        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.sectionHeading}>Active Driver Sheets</Text>
-          <Text style={styles.sectionSubtitle}>Select a driver to audit system data against physical collections.</Text>
-          
-          <View style={styles.driverList}>
-            {reconciliations.map((req) => {
-              let statusColor = '#64748B';
-              let statusBg = '#F1F5F9';
-              let statusText = 'In Progress';
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#087E66" />
+          <Text style={styles.loadingText}>Loading reconciliation data...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={fetchData}>
+            <Text style={styles.retryBtnText}>Retry / Refresh</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          {/* Admin View - List of Drivers */}
+          {isAdmin && !selectedDriver && (
+            <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+              <Text style={styles.sectionHeading}>Active Driver Sheets</Text>
+              <Text style={styles.sectionSubtitle}>Select a driver to audit system data against physical collections.</Text>
               
-              if (req.status === 'pending_approval') {
-                statusColor = '#D97706';
-                statusBg = '#FEF3C7';
-                statusText = 'Pending Approval';
-              } else if (req.status === 'reconciled') {
-                statusColor = '#059669';
-                statusBg = '#D1FAE5';
-                statusText = 'Reconciled & Closed';
-              }
-
-              const totalLoaded = req.inventory.reduce((acc, item) => acc + item.loaded, 0);
-              const totalSold = req.inventory.reduce((acc, item) => acc + item.sold, 0);
-
-              return (
-                <TouchableOpacity
-                  key={req.driverName}
-                  style={styles.driverCard}
-                  onPress={() => setSelectedDriver(req.driverName)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.driverCardHeader}>
-                    <View>
-                      <Text style={styles.driverNameText}>{req.driverName}</Text>
-                      <Text style={styles.driverVehicleText}>Vehicle: {req.vehicleNo}</Text>
-                    </View>
-                    <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
-                      <Text style={[styles.statusPillText, { color: statusColor }]}>{statusText}</Text>
-                    </View>
-                  </View>
+              <View style={styles.driverList}>
+                {reconciliations.map((req) => {
+                  let statusColor = '#64748B';
+                  let statusBg = '#F1F5F9';
+                  let statusText = 'In Progress';
                   
-                  <View style={styles.driverCardMetrics}>
-                    <View style={styles.driverMetricCol}>
-                      <Text style={styles.driverMetricLabel}>LOADED</Text>
-                      <Text style={styles.driverMetricVal}>{totalLoaded} L</Text>
-                    </View>
-                    <View style={styles.driverMetricCol}>
-                      <Text style={styles.driverMetricLabel}>SOLD</Text>
-                      <Text style={styles.driverMetricVal}>{totalSold} L</Text>
-                    </View>
-                    <View style={styles.driverMetricCol}>
-                      <Text style={styles.driverMetricLabel}>EXPECTED CASH</Text>
-                      <Text style={[styles.driverMetricVal, { color: '#087E66' }]}>₹{req.financials.expectedCash.toLocaleString()}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-      )}
+                  if (req.status === 'pending_approval') {
+                    statusColor = '#D97706';
+                    statusBg = '#FEF3C7';
+                    statusText = 'Pending Approval';
+                  } else if (req.status === 'reconciled') {
+                    statusColor = '#059669';
+                    statusBg = '#D1FAE5';
+                    statusText = 'Reconciled & Closed';
+                  }
 
-      {/* Admin View - Detail view for a selected driver */}
-      {isAdmin && selectedDriver && (() => {
-        const req = reconciliations.find(r => r.driverName === selectedDriver);
-        if (!req) return null;
+                  const totalLoaded = req.inventory.reduce((acc, item) => acc + item.loaded, 0);
+                  const totalSold = req.inventory.reduce((acc, item) => acc + item.sold, 0);
 
-        const totalExpectedCash = req.financials.expectedCash;
-        const totalActualCash = req.financials.actualCash;
-        const cashDiff = totalActualCash - totalExpectedCash;
-        const isReconciled = req.status === 'reconciled';
-
-        return (
-          <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {/* Driver Summary Banner */}
-            <View style={styles.driverSummaryBanner}>
-              <Text style={styles.bannerTitle}>{req.driverName}</Text>
-              <Text style={styles.bannerSubtitle}>Vehicle: {req.vehicleNo} | Date: {req.date}</Text>
-            </View>
-
-            {/* Stock Comparison */}
-            <Text style={styles.sectionHeading}>Expected vs Driver Entered Stock</Text>
-            <View style={styles.comparisonCard}>
-              {req.inventory.map((item) => {
-                const expRemaining = item.expected;
-                const actualRemaining = item.actual !== '' ? parseInt(item.actual, 10) : 0;
-                const diff = actualRemaining - expRemaining;
-                const isShort = diff < 0;
-                const isFlagged = req.flaggedDiscrepancies.some(d => d.includes(item.name));
-
-                return (
-                  <View key={item.id} style={styles.itemRow}>
-                    <View style={styles.itemDetails}>
-                      <Text style={styles.itemName}>{item.name}</Text>
-                      <Text style={styles.itemMath}>Loaded: {item.loaded} | Sold: {item.sold}</Text>
-                    </View>
-                    
-                    <View style={styles.itemComparisonCol}>
-                      <View style={styles.valuesRow}>
-                        <View style={styles.valueBox}>
-                          <Text style={styles.valueBoxLabel}>Expected</Text>
-                          <Text style={styles.valueBoxVal}>{expRemaining}</Text>
+                  return (
+                    <TouchableOpacity
+                      key={req.driverName}
+                      style={styles.driverCard}
+                      onPress={() => setSelectedDriver(req.driverName)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.driverCardHeader}>
+                        <View>
+                          <Text style={styles.driverNameText}>{req.driverName}</Text>
+                          <Text style={styles.driverVehicleText}>Vehicle: {req.vehicleNo}</Text>
                         </View>
-                        <View style={styles.valueBox}>
-                          <Text style={styles.valueBoxLabel}>Actual</Text>
-                          <Text style={[styles.valueBoxVal, isShort ? styles.redText : styles.tealText]}>
-                            {item.actual === '' ? '—' : actualRemaining}
-                          </Text>
+                        <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
+                          <Text style={[styles.statusPillText, { color: statusColor }]}>{statusText}</Text>
                         </View>
                       </View>
+                      
+                      <View style={styles.driverCardMetrics}>
+                        <View style={styles.driverMetricCol}>
+                          <Text style={styles.driverMetricLabel}>LOADED</Text>
+                          <Text style={styles.driverMetricVal}>{totalLoaded} L</Text>
+                        </View>
+                        <View style={styles.driverMetricCol}>
+                          <Text style={styles.driverMetricLabel}>SOLD</Text>
+                          <Text style={styles.driverMetricVal}>{totalSold} L</Text>
+                        </View>
+                        <View style={styles.driverMetricCol}>
+                          <Text style={styles.driverMetricLabel}>EXPECTED CASH</Text>
+                          <Text style={[styles.driverMetricVal, styles.tealText]}>₹{req.financials.expectedCash.toLocaleString()}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          )}
 
-                      {item.actual !== '' && diff !== 0 && (
-                        <View style={styles.diffRow}>
-                          <Text style={[styles.diffText, isShort ? styles.redText : styles.tealText]}>
-                            {isShort ? `⚠️ ${Math.abs(diff)}L missing` : `✓ +${diff}L extra`}
-                          </Text>
-                          
-                          {!isReconciled && isShort && (
-                            <TouchableOpacity
-                              style={[styles.flagBtn, isFlagged && styles.flagBtnActive]}
-                              onPress={() => handleFlagStockDiscrepancy(req.driverName, item, diff)}
-                            >
-                              <Text style={[styles.flagBtnText, isFlagged && styles.flagBtnActiveText]}>
-                                {isFlagged ? 'Flagged' : 'Flag Discrepancy'}
+          {/* Admin View - Detail view for a selected driver */}
+          {isAdmin && selectedDriver && (() => {
+            const req = reconciliations.find(r => r.driverName === selectedDriver);
+            if (!req) return null;
+
+            const totalExpectedCash = req.financials.expectedCash;
+            const totalActualCash = req.financials.actualCash;
+            const cashDiff = totalActualCash - totalExpectedCash;
+            const isReconciled = req.status === 'reconciled';
+
+            return (
+              <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                {/* Driver Summary Banner */}
+                <View style={styles.driverSummaryBanner}>
+                  <Text style={styles.bannerTitle}>{req.driverName}</Text>
+                  <Text style={styles.bannerSubtitle}>Vehicle: {req.vehicleNo} | Date: {req.date}</Text>
+                </View>
+
+                {/* Stock Comparison */}
+                <Text style={styles.sectionHeading}>Expected vs Driver Entered Stock</Text>
+                <View style={styles.comparisonCard}>
+                  {req.inventory.map((item) => {
+                    const expRemaining = item.expected;
+                    const actualRemaining = item.actual !== '' ? parseInt(item.actual, 10) : 0;
+                    const diff = actualRemaining - expRemaining;
+                    const isShort = diff < 0;
+                    const isFlagged = req.flaggedDiscrepancies.some(d => d.includes(item.name));
+
+                    return (
+                      <View key={item.id} style={styles.itemRow}>
+                        <View style={styles.itemDetails}>
+                          <Text style={styles.itemName}>{item.name}</Text>
+                          <Text style={styles.itemMath}>Loaded: {item.loaded} | Sold: {item.sold}</Text>
+                        </View>
+                        
+                        <View style={styles.itemComparisonCol}>
+                          <View style={styles.valuesRow}>
+                            <View style={styles.valueBox}>
+                              <Text style={styles.valueBoxLabel}>Expected</Text>
+                              <Text style={styles.valueBoxVal}>{expRemaining}</Text>
+                            </View>
+                            <View style={styles.valueBox}>
+                              <Text style={styles.valueBoxLabel}>Actual</Text>
+                              <Text style={[styles.valueBoxVal, isShort ? styles.redText : styles.tealText]}>
+                                {item.actual === '' ? '—' : actualRemaining}
                               </Text>
-                            </TouchableOpacity>
+                            </View>
+                          </View>
+
+                          {item.actual !== '' && diff !== 0 && (
+                            <View style={styles.diffRow}>
+                              <Text style={[styles.diffText, isShort ? styles.redText : styles.tealText]}>
+                                {isShort ? `⚠️ ${Math.abs(diff)}L missing` : `✓ +${diff}L extra`}
+                              </Text>
+                              
+                              {!isReconciled && isShort && (
+                                <TouchableOpacity
+                                  style={[styles.flagBtn, isFlagged && styles.flagBtnActive]}
+                                  onPress={() => handleFlagStockDiscrepancy(req.driverName, item, diff)}
+                                >
+                                  <Text style={[styles.flagBtnText, isFlagged && styles.flagBtnActiveText]}>
+                                    {isFlagged ? 'Flagged' : 'Flag Discrepancy'}
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
                           )}
                         </View>
-                      )}
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Cash Comparison */}
+                <Text style={styles.sectionHeading}>Expected vs Handed Over Cash</Text>
+                <View style={styles.comparisonCard}>
+                  <View style={styles.cashRow}>
+                    <View style={styles.cashCol}>
+                      <Text style={styles.cashLabel}>SYSTEM EXPECTED CASH</Text>
+                      <Text style={styles.cashValue}>₹{totalExpectedCash.toLocaleString()}</Text>
+                    </View>
+                    <View style={styles.cashCol}>
+                      <Text style={styles.cashLabel}>DRIVER HANDED OVER</Text>
+                      <Text style={[styles.cashValue, cashDiff < 0 ? styles.redText : styles.tealText]}>
+                        ₹{totalActualCash.toLocaleString()}
+                      </Text>
                     </View>
                   </View>
-                );
-              })}
-            </View>
 
-            {/* Cash Comparison */}
-            <Text style={styles.sectionHeading}>Expected vs Handed Over Cash</Text>
-            <View style={styles.comparisonCard}>
-              <View style={styles.cashRow}>
-                <View style={styles.cashCol}>
-                  <Text style={styles.cashLabel}>SYSTEM EXPECTED CASH</Text>
-                  <Text style={styles.cashValue}>₹{totalExpectedCash.toLocaleString()}</Text>
+                  {cashDiff !== 0 && (
+                    <View style={styles.cashDiffRow}>
+                      <Text style={[styles.cashDiffText, cashDiff < 0 ? styles.redText : styles.tealText]}>
+                        {cashDiff < 0 
+                          ? `⚠️ Shortage of ₹${Math.abs(cashDiff).toLocaleString()}` 
+                          : `✓ Excess of ₹${cashDiff.toLocaleString()}`
+                        }
+                      </Text>
+
+                      {!isReconciled && cashDiff < 0 && (() => {
+                        const isFlagged = req.flaggedDiscrepancies.some(d => d.includes('Cash Handover'));
+                        return (
+                          <TouchableOpacity
+                            style={[styles.flagBtn, isFlagged && styles.flagBtnActive]}
+                            onPress={() => handleFlagCashDiscrepancy(req.driverName, cashDiff)}
+                          >
+                            <Text style={[styles.flagBtnText, isFlagged && styles.flagBtnActiveText]}>
+                              {isFlagged ? 'Flagged' : 'Flag Discrepancy'}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })()}
+                    </View>
+                  )}
                 </View>
-                <View style={styles.cashCol}>
-                  <Text style={styles.cashLabel}>DRIVER HANDED OVER</Text>
-                  <Text style={[styles.cashValue, cashDiff < 0 ? styles.redText : styles.tealText]}>
-                    ₹{totalActualCash.toLocaleString()}
-                  </Text>
-                </View>
-              </View>
 
-              {cashDiff !== 0 && (
-                <View style={styles.cashDiffRow}>
-                  <Text style={[styles.cashDiffText, cashDiff < 0 ? styles.redText : styles.tealText]}>
-                    {cashDiff < 0 
-                      ? `⚠️ Shortage of ₹${Math.abs(cashDiff).toLocaleString()}` 
-                      : `✓ Excess of ₹${cashDiff.toLocaleString()}`
-                    }
-                  </Text>
+                {/* UPI Comparison */}
+                <Text style={styles.sectionHeading}>Expected vs Reported UPI Payments</Text>
+                <View style={styles.comparisonCard}>
+                  <View style={styles.cashRow}>
+                    <View style={styles.cashCol}>
+                      <Text style={styles.cashLabel}>SYSTEM EXPECTED UPI</Text>
+                      <Text style={styles.cashValue}>₹{req.financials.expectedUpi.toLocaleString()}</Text>
+                    </View>
+                    <View style={styles.cashCol}>
+                      <Text style={styles.cashLabel}>DRIVER REPORTED UPI</Text>
+                      <Text style={[styles.cashValue, (req.financials.actualUpi - req.financials.expectedUpi) < 0 ? styles.redText : styles.tealText]}>
+                        ₹{req.financials.actualUpi.toLocaleString()}
+                      </Text>
+                    </View>
+                  </View>
 
-                  {!isReconciled && cashDiff < 0 && (() => {
-                    const isFlagged = req.flaggedDiscrepancies.some(d => d.includes('Cash Handover'));
+                  {(req.financials.actualUpi - req.financials.expectedUpi) !== 0 && (() => {
+                    const upiDiff = req.financials.actualUpi - req.financials.expectedUpi;
+                    const isUpiShort = upiDiff < 0;
+                    const isFlagged = req.flaggedDiscrepancies.some(d => d.includes('UPI Handover'));
                     return (
-                      <TouchableOpacity
-                        style={[styles.flagBtn, isFlagged && styles.flagBtnActive]}
-                        onPress={() => handleFlagCashDiscrepancy(req.driverName, cashDiff)}
-                      >
-                        <Text style={[styles.flagBtnText, isFlagged && styles.flagBtnActiveText]}>
-                          {isFlagged ? 'Flagged' : 'Flag Discrepancy'}
+                      <View style={styles.cashDiffRow}>
+                        <Text style={[styles.cashDiffText, isUpiShort ? styles.redText : styles.tealText]}>
+                          {isUpiShort 
+                            ? `⚠️ Shortage of ₹${Math.abs(upiDiff).toLocaleString()}` 
+                            : `✓ Excess of ₹${upiDiff.toLocaleString()}`
+                          }
                         </Text>
-                      </TouchableOpacity>
+
+                        {!isReconciled && isUpiShort && (
+                          <TouchableOpacity
+                            style={[styles.flagBtn, isFlagged && styles.flagBtnActive]}
+                            onPress={() => handleFlagUpiDiscrepancy(req.driverName, upiDiff)}
+                          >
+                            <Text style={[styles.flagBtnText, isFlagged && styles.flagBtnActiveText]}>
+                              {isFlagged ? 'Flagged' : 'Flag Discrepancy'}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     );
                   })()}
                 </View>
-              )}
-            </View>
 
-            {/* Shortage Logger Summary Box */}
-            <Text style={styles.sectionHeading}>Shortage Logger & Discrepancy Record</Text>
-            <View style={[styles.discrepancyBox, req.flaggedDiscrepancies.length > 0 && styles.discrepancyBoxWarning]}>
-              {req.flaggedDiscrepancies.length === 0 ? (
-                <Text style={styles.noDiscrepancyText}>✓ No shortages logged against this driver's trip.</Text>
-              ) : (
-                <View>
-                  <Text style={styles.loggedShortageHeading}>LOGGED SHORTAGES AGAINST {req.driverName.toUpperCase()}:</Text>
-                  {req.flaggedDiscrepancies.map((desc, dIdx) => (
-                    <View key={dIdx} style={styles.shortageItemRow}>
-                      <Text style={styles.shortageIcon}>⚠️</Text>
-                      <Text style={styles.shortageDescText}>{desc}</Text>
+                {/* Shortage Logger Summary Box */}
+                <Text style={styles.sectionHeading}>Shortage Logger & Discrepancy Record</Text>
+                <View style={[styles.discrepancyBox, req.flaggedDiscrepancies.length > 0 && styles.discrepancyBoxWarning]}>
+                  {req.flaggedDiscrepancies.length === 0 ? (
+                    <Text style={styles.noDiscrepancyText}>✓ No shortages logged against this driver's trip.</Text>
+                  ) : (
+                    <View>
+                      <Text style={styles.loggedShortageHeading}>LOGGED SHORTAGES AGAINST {req.driverName.toUpperCase()}:</Text>
+                      {req.flaggedDiscrepancies.map((desc, dIdx) => (
+                        <View key={dIdx} style={styles.shortageItemRow}>
+                          <Text style={styles.shortageIcon}>⚠️</Text>
+                          <Text style={styles.shortageDescText}>{desc}</Text>
+                        </View>
+                      ))}
+                      <Text style={styles.shortageNote}>These discrepancies will be saved as losses on the driver's profile.</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Admin Actions */}
+                {!isReconciled ? (
+                  <View style={styles.actionButtonsRow}>
+                    <TouchableOpacity
+                      style={styles.rejectBtn}
+                      onPress={() => handleRejectReconciliation(req.driverName)}
+                    >
+                      <Text style={styles.rejectBtnText}>Reject & Send Back</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={styles.approveBtn}
+                      onPress={() => handleApproveReconciliation(req.driverName)}
+                    >
+                      <Text style={styles.approveBtnText}>Approve & Close Day</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.reconciledStatusBanner}>
+                    <Text style={styles.reconciledStatusText}>✓ Trip Reconciled & Day Closed</Text>
+                    <Text style={styles.reconciledStatusSub}>All records are locked and saved.</Text>
+                  </View>
+                )}
+              </ScrollView>
+            );
+          })()}
+
+          {/* Driver (Executive) View */}
+          {!isAdmin && (() => {
+            if (!activeTrip) {
+              return (
+                <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                  <View style={styles.pendingStateContainer}>
+                    <View style={[styles.pendingIconCircle, styles.grayBg]}>
+                      <Text style={styles.pendingIconText}>🚚</Text>
+                    </View>
+                    <Text style={[styles.pendingTitle, styles.grayText]}>No Active Trip</Text>
+                    <Text style={styles.pendingSubtitle}>
+                      You do not have an active vehicle or trip assigned for today.
+                    </Text>
+                    <Text style={styles.pendingNote}>
+                      Please contact the administrator to log a load manifest and assign your daily area.
+                    </Text>
+                  </View>
+                </ScrollView>
+              );
+            }
+
+            const isReconciled = activeTrip.status === 'reconciled';
+            const isPending = activeTrip.status === 'pending_approval';
+
+            if (isReconciled) {
+              return (
+                <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                  <View style={styles.successStateContainer}>
+                    <View style={styles.successIconCircle}>
+                      <Text style={styles.successIconText}>✓</Text>
+                    </View>
+                    <Text style={styles.successTitle}>Day Closed Successfully</Text>
+                    <Text style={styles.successSubtitle}>
+                      Your EOD Reconciliation has been approved by the Admin and today's trip is locked.
+                    </Text>
+                    <Text style={styles.successNote}>
+                      Thank you for verifying! You are good to go.
+                    </Text>
+                    <TouchableOpacity 
+                      style={styles.backToDashboardBtn} 
+                      onPress={() => navigation.navigate('Dashboard')}
+                    >
+                      <Text style={styles.backToDashboardBtnText}>Back to Dashboard</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              );
+            }
+
+            if (isPending) {
+              return (
+                <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                  <View style={styles.pendingStateContainer}>
+                    <View style={styles.pendingIconCircle}>
+                      <Text style={styles.pendingIconText}>⏳</Text>
+                    </View>
+                    <Text style={styles.pendingTitle}>Submitted for Approval</Text>
+                    <Text style={styles.pendingSubtitle}>
+                      Your EOD Reconciliation sheet is now with the Admin.
+                    </Text>
+                    <Text style={styles.pendingNote}>
+                      Please hand over your physical cash collection of ₹{(activeTrip.financials.actualCash + activeTrip.financials.actualUpi).toLocaleString()} and wait for the Admin to reconcile your remaining stock.
+                    </Text>
+                    <TouchableOpacity 
+                      style={styles.backToDashboardBtn} 
+                      onPress={() => navigation.navigate('Dashboard')}
+                    >
+                      <Text style={styles.backToDashboardBtnText}>Go to Dashboard</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              );
+            }
+
+            return (
+              <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                {/* Instructions */}
+                <View style={styles.instructionsBanner}>
+                  <Text style={styles.instructionsHeading}>End-Of-Day Reconciliation</Text>
+                  <Text style={styles.instructionsBody}>
+                    Count your remaining physical stock in the vehicle and count your cash collections. Submit them to the Admin to close your day.
+                  </Text>
+                </View>
+
+                {/* Stock Entry */}
+                <Text style={styles.sectionHeading}>Physical Stock Remaining</Text>
+                <View style={styles.inputCard}>
+                  {activeTrip.inventory.map((item) => (
+                    <View key={item.id} style={styles.inputRow}>
+                      <View style={styles.inputLabelCol}>
+                        <Text style={styles.itemName}>{item.name}</Text>
+                        <Text style={styles.itemMath}>Loaded: {item.loaded} | Sold: {item.sold} | Expected: {item.expected}</Text>
+                      </View>
+                      <View style={styles.inputBoxCol}>
+                        <TextInput
+                          style={styles.numberInput}
+                          keyboardType="numeric"
+                          placeholder="Actual"
+                          placeholderTextColor="#94A3B8"
+                          value={item.actual}
+                          onChangeText={(val) => handleDriverStockChange(item.id, val)}
+                        />
+                      </View>
                     </View>
                   ))}
-                  <Text style={styles.shortageNote}>These discrepancies will be saved as losses on the driver's profile.</Text>
                 </View>
-              )}
-            </View>
 
-            {/* Admin Actions */}
-            {!isReconciled ? (
-              <View style={styles.actionButtonsRow}>
-                <TouchableOpacity
-                  style={styles.rejectBtn}
-                  onPress={() => handleRejectReconciliation(req.driverName)}
-                >
-                  <Text style={styles.rejectBtnText}>Reject & Send Back</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.approveBtn}
-                  onPress={() => handleApproveReconciliation(req.driverName)}
-                >
-                  <Text style={styles.approveBtnText}>Approve & Close Day</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.reconciledStatusBanner}>
-                <Text style={styles.reconciledStatusText}>✓ Trip Reconciled & Day Closed</Text>
-                <Text style={styles.reconciledStatusSub}>All records are locked and saved.</Text>
-              </View>
-            )}
-          </ScrollView>
-        );
-      })()}
-
-      {/* Driver (Executive) View */}
-      {!isAdmin && (() => {
-        const isReconciled = activeRequest.status === 'reconciled';
-        const isPending = activeRequest.status === 'pending_approval';
-
-        if (isReconciled) {
-          return (
-            <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-              <View style={styles.successStateContainer}>
-                <View style={styles.successIconCircle}>
-                  <Text style={styles.successIconText}>✓</Text>
-                </View>
-                <Text style={styles.successTitle}>Day Closed Successfully</Text>
-                <Text style={styles.successSubtitle}>
-                  Your EOD Reconciliation has been approved by the Admin and today's trip is locked.
-                </Text>
-                <Text style={styles.successNote}>
-                  Thank you for verifying! You are good to go.
-                </Text>
-                <TouchableOpacity 
-                  style={styles.backToDashboardBtn} 
-                  onPress={() => navigation.navigate('Dashboard')}
-                >
-                  <Text style={styles.backToDashboardBtnText}>Back to Dashboard</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          );
-        }
-
-        if (isPending) {
-          return (
-            <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-              <View style={styles.pendingStateContainer}>
-                <View style={styles.pendingIconCircle}>
-                  <Text style={styles.pendingIconText}>⏳</Text>
-                </View>
-                <Text style={styles.pendingTitle}>Submitted for Approval</Text>
-                <Text style={styles.pendingSubtitle}>
-                  Your EOD Reconciliation sheet is now with the Admin.
-                </Text>
-                <Text style={styles.pendingNote}>
-                  Please hand over your physical cash collection of ₹{(activeRequest.financials.actualCash + activeRequest.financials.actualUpi).toLocaleString()} and wait for the Admin to reconcile your remaining stock.
-                </Text>
-                <TouchableOpacity 
-                  style={styles.backToDashboardBtn} 
-                  onPress={() => navigation.navigate('Dashboard')}
-                >
-                  <Text style={styles.backToDashboardBtnText}>Go to Dashboard</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          );
-        }
-
-        return (
-          <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {/* Instructions */}
-            <View style={styles.instructionsBanner}>
-              <Text style={styles.instructionsHeading}>End-Of-Day Reconciliation</Text>
-              <Text style={styles.instructionsBody}>
-                Count your remaining physical stock in the vehicle and count your cash collections. Submit them to the Admin to close your day.
-              </Text>
-            </View>
-
-            {/* Stock Entry */}
-            <Text style={styles.sectionHeading}>Physical Stock Remaining</Text>
-            <View style={styles.inputCard}>
-              {activeRequest.inventory.map((item) => (
-                <View key={item.id} style={styles.inputRow}>
-                  <View style={styles.inputLabelCol}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemMath}>Loaded: {item.loaded} | Sold: {item.sold} | Expected: {item.expected}</Text>
+                {/* Financial Entry */}
+                <Text style={styles.sectionHeading}>Physical Cash & Collections Handover</Text>
+                <View style={styles.inputCard}>
+                  <View style={styles.expectedCashSummaryBanner}>
+                    <Text style={styles.expectedCashSummaryLabel}>Expected Cash Total (From Invoices):</Text>
+                    <Text style={styles.expectedCashSummaryVal}>₹{activeTrip.financials.expectedCash.toLocaleString()}</Text>
                   </View>
-                  <View style={styles.inputBoxCol}>
-                    <TextInput
-                      style={styles.numberInput}
-                      keyboardType="numeric"
-                      placeholder="Actual"
-                      placeholderTextColor="#94A3B8"
-                      value={item.actual}
-                      onChangeText={(val) => handleDriverStockChange(item.id, val)}
-                    />
+                  
+                  <View style={[styles.inputRow, styles.marginTop10]}>
+                    <View style={styles.inputLabelCol}>
+                      <Text style={styles.itemName}>Physical Cash Handover</Text>
+                      <Text style={styles.itemMath}>Count and enter physical cash bills</Text>
+                    </View>
+                    <View style={styles.inputBoxCol}>
+                      <TextInput
+                        style={styles.numberInput}
+                        keyboardType="numeric"
+                        placeholder="₹ Cash"
+                        placeholderTextColor="#94A3B8"
+                        value={activeTrip.financials.actualCash === 0 ? '' : String(activeTrip.financials.actualCash)}
+                        onChangeText={handleDriverCashChange}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputRow}>
+                    <View style={styles.inputLabelCol}>
+                      <Text style={styles.itemName}>UPI / Online Received</Text>
+                      <Text style={styles.itemMath}>Total payments received on QR code</Text>
+                    </View>
+                    <View style={styles.inputBoxCol}>
+                      <TextInput
+                        style={styles.numberInput}
+                        keyboardType="numeric"
+                        placeholder="₹ UPI"
+                        placeholderTextColor="#94A3B8"
+                        value={activeTrip.financials.actualUpi === 0 ? '' : String(activeTrip.financials.actualUpi)}
+                        onChangeText={handleDriverUpiChange}
+                      />
+                    </View>
                   </View>
                 </View>
-              ))}
-            </View>
 
-            {/* Financial Entry */}
-            <Text style={styles.sectionHeading}>Physical Cash & Collections Handover</Text>
-            <View style={styles.inputCard}>
-              <View style={styles.expectedCashSummaryBanner}>
-                <Text style={styles.expectedCashSummaryLabel}>Expected Cash Total (From Invoices):</Text>
-                <Text style={styles.expectedCashSummaryVal}>₹{activeRequest.financials.expectedCash.toLocaleString()}</Text>
-              </View>
-              
-              <View style={[styles.inputRow, { marginTop: 10 }]}>
-                <View style={styles.inputLabelCol}>
-                  <Text style={styles.itemName}>Physical Cash Handover</Text>
-                  <Text style={styles.itemMath}>Count and enter physical cash bills</Text>
-                </View>
-                <View style={styles.inputBoxCol}>
-                  <TextInput
-                    style={styles.numberInput}
-                    keyboardType="numeric"
-                    placeholder="₹ Cash"
-                    placeholderTextColor="#94A3B8"
-                    value={activeRequest.financials.actualCash === 0 ? '' : String(activeRequest.financials.actualCash)}
-                    onChangeText={handleDriverCashChange}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={styles.inputLabelCol}>
-                  <Text style={styles.itemName}>UPI / Online Received</Text>
-                  <Text style={styles.itemMath}>Total payments received on QR code</Text>
-                </View>
-                <View style={styles.inputBoxCol}>
-                  <TextInput
-                    style={styles.numberInput}
-                    keyboardType="numeric"
-                    placeholder="₹ UPI"
-                    placeholderTextColor="#94A3B8"
-                    value={activeRequest.financials.actualUpi === 0 ? '' : String(activeRequest.financials.actualUpi)}
-                    onChangeText={handleDriverUpiChange}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.submitEodBtn} onPress={handleDriverSubmit}>
-              <Text style={styles.submitEodBtnText}>Submit EOD Reconciliation</Text>
-              <Text style={styles.submitEodBtnSub}>Sends sheet to Admin for review</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        );
-      })()}
-
+                <TouchableOpacity style={styles.submitEodBtn} onPress={handleDriverSubmit}>
+                  <Text style={styles.submitEodBtnText}>Submit EOD Reconciliation</Text>
+                  <Text style={styles.submitEodBtnSub}>Sends sheet to Admin for review</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            );
+          })()}
+        </>
+      )}
       <BottomNav navigation={navigation} currentRoute="Reconciliation" />
     </SafeAreaView>
   );
@@ -1157,6 +1316,15 @@ const styles = StyleSheet.create({
   },
   redText: {
     color: '#EF4444',
+  },
+  grayBg: {
+    backgroundColor: '#E2E8F0',
+  },
+  grayText: {
+    color: '#475569',
+  },
+  marginTop10: {
+    marginTop: 10,
   },
 });
 

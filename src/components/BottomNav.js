@@ -1,27 +1,46 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 const BottomNav = ({ navigation, currentRoute }) => {
-  const tabs = [
+  const { userData } = useAuth();
+  const isAdmin = userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin';
+
+  const adminTabs = [
+    { name: 'Dashboard', icon: '⌂', route: 'AdminDashboard' },
+    { name: 'Products', icon: '📦', route: 'ProductManagement' },
+    { name: 'Users', icon: '👥', route: 'UserManagement' },
+    { name: 'Supply', icon: '🚚', route: 'SupplyManagement' },
+    { name: 'Reports', icon: '📊', route: 'Reports' },
+    { name: 'EOD', icon: '💰', route: 'AdminEOD' },
+    { name: 'Vehicles', icon: '🚚', route: 'AdminVehicleList' },
+  ];
+
+  const executiveTabs = [
     { name: 'Home', icon: '⌂', route: 'Dashboard' },
     { name: 'Inventory', icon: '☷', route: 'Inventory' },
     { name: 'Shops', icon: '⚲', route: 'Shops' },
     { name: 'Reports', icon: '◫', route: 'Reports' },
-    { name: 'Audit', icon: '◈', route: 'Reconciliation' },
+    { name: 'Audit', icon: '◈', route: 'UserSalesAudit' },
   ];
+
+  const tabs = isAdmin ? adminTabs : executiveTabs;
 
   return (
     <View style={styles.bottomTab}>
       {tabs.map((tab, index) => {
-        const isActive = currentRoute === tab.route;
+        const isActive = currentRoute === tab.route ||
+          (tab.route === 'AdminEOD' && currentRoute === 'Reconciliation') ||
+          (tab.route === 'Reports' && currentRoute === 'AdminSalesReports') ||
+          (tab.route === 'AdminDashboard' && currentRoute === 'Dashboard');
         return (
           <TouchableOpacity
             key={index}
-            style={styles.tabItem}
+            style={[styles.tabItem, isAdmin && styles.adminTabItem]}
             onPress={() => navigation.navigate(tab.route)}
           >
-            <Text style={[styles.tabIcon, isActive && styles.tabIconActive]}>{tab.icon}</Text>
-            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.name}</Text>
+            <Text style={[styles.tabIcon, isAdmin && styles.adminTabIcon, isActive && styles.tabIconActive]}>{tab.icon}</Text>
+            <Text style={[styles.tabText, isAdmin && styles.adminTabText, isActive && styles.tabTextActive]} numberOfLines={1}>{tab.name}</Text>
           </TouchableOpacity>
         );
       })}
@@ -51,10 +70,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
   },
+  adminTabItem: {
+    paddingHorizontal: 2,
+  },
   tabIcon: {
     fontSize: 22,
     color: '#94A3B8',
     marginBottom: 4,
+  },
+  adminTabIcon: {
+    fontSize: 18,
+    marginBottom: 2,
   },
   tabIconActive: {
     color: '#087E66',
@@ -63,6 +89,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#94A3B8',
+  },
+  adminTabText: {
+    fontSize: 8,
   },
   tabTextActive: {
     color: '#1E293B',

@@ -8,10 +8,14 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Sidebar from '../components/Sidebar';
+import BottomNav from '../components/BottomNav';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../config/config';
 
 // Custom red trash can icon drawn with components
 const RedTrashIcon = () => (
@@ -69,12 +73,43 @@ const UserListScreen = ({ navigation, route }) => {
   const { username } = route.params || { username: 'Admin' };
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [users, setUsers] = useState(globalUsersList);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Sync with global runtime memory when screen comes into focus
+  const fetchUsers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setError('No token found');
+        return;
+      }
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/users`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setUsers(data);
+      } else {
+        setError(data.error || 'Failed to fetch users');
+      }
+    } catch (err) {
+      console.error('Fetch users error:', err);
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
-      setUsers([...globalUsersList]);
+      fetchUsers();
     }, [])
   );
 
@@ -84,17 +119,35 @@ const UserListScreen = ({ navigation, route }) => {
 
   const handleDelete = (user) => {
     Alert.alert(
-      'Delete User',
-      `Are you sure you want to delete "${user.username}"?`,
+      'Deactivate User',
+      `Are you sure you want to deactivate "${user.username}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Deactivate',
           style: 'destructive',
-          onPress: () => {
-            globalUsersList = globalUsersList.filter(u => u.user_id !== user.user_id);
-            setUsers([...globalUsersList]);
-            Alert.alert('Success', 'User deleted successfully.');
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('userToken');
+              if (!token) return;
+              const response = await fetch(`${CONFIG.API_BASE_URL}/api/users/${user.user_id}`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              const data = await response.json();
+              if (response.ok) {
+                Alert.alert('Success', 'User deactivated successfully.');
+                fetchUsers();
+              } else {
+                Alert.alert('Error', data.error || 'Failed to deactivate user.');
+              }
+            } catch (err) {
+              console.error('Delete user error:', err);
+              Alert.alert('Error', 'Network error.');
+            }
           }
         }
       ]
@@ -102,10 +155,10 @@ const UserListScreen = ({ navigation, route }) => {
   };
 
   const filteredUsers = users.filter(u =>
-    u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.phone.includes(searchQuery) ||
-    getRoleName(u.role_id).toLowerCase().includes(searchQuery.toLowerCase())
+    (u.username || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.phone || '').includes(searchQuery) ||
+    (u.role_name || getRoleName(u.role_id)).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -154,7 +207,12 @@ const UserListScreen = ({ navigation, route }) => {
         </View>
 
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {filteredUsers.map((user) => (
+          {loading && users.length === 0 ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color="#087E66" />
+              <Text style={styles.loadingText}>Loading users...</Text>
+            </View>
+          ) : filteredUsers.map((user) => (
             <View key={user.user_id} style={styles.card}>
               <View style={styles.cardLeft}>
                 <View style={styles.avatarIconContainer}>
@@ -162,8 +220,8 @@ const UserListScreen = ({ navigation, route }) => {
                 </View>
                 <View style={styles.userMeta}>
                   <Text style={styles.name} numberOfLines={1}>{user.username}</Text>
-                  <Text style={styles.roleSubtext}>{getRoleName(user.role_id)}</Text>
-                  <Text style={styles.contactSubtext}>{user.phone} • {user.email}</Text>
+                  <Text style={styles.roleSubtext}>{user.role_name || getRoleName(user.role_id)}</Text>
+                  <Text style={styles.contactSubtext}>{user.phone || 'No phone'} • {user.email || 'No email'}</Text>
                 </View>
               </View>
 
@@ -171,28 +229,36 @@ const UserListScreen = ({ navigation, route }) => {
                 <View
                   style={[
                     styles.statusDot,
-                    user.status.toUpperCase() === 'ACTIVE'
+                    (user.status || '').trim().toUpperCase() === 'ACTIVE'
                       ? styles.statusActiveDot
                       : styles.statusInactiveDot
                   ]}
                 />
-                <TouchableOpacity
-                  style={styles.actionEditBtn}
-                  onPress={() => navigation.navigate('AddUser', { user })}
-                >
-                  <Text style={styles.actionEditIcon}>✎</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionDeleteBtn}
-                  onPress={() => handleDelete(user)}
-                >
-                  <RedTrashIcon />
-                </TouchableOpacity>
+                {user.role_id === 1 ? (
+                  <View style={styles.protectedBadge}>
+                    <Text style={styles.protectedBadgeText}>🔒 Admin</Text>
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={styles.actionEditBtn}
+                      onPress={() => navigation.navigate('AddUser', { user })}
+                    >
+                      <Text style={styles.actionEditIcon}>✎</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionDeleteBtn}
+                      onPress={() => handleDelete(user)}
+                    >
+                      <RedTrashIcon />
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </View>
           ))}
 
-          {filteredUsers.length === 0 && (
+          {!loading && filteredUsers.length === 0 && (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>👥</Text>
               <Text style={styles.emptyText}>No users found</Text>
@@ -200,6 +266,7 @@ const UserListScreen = ({ navigation, route }) => {
           )}
         </ScrollView>
       </View>
+      <BottomNav navigation={navigation} currentRoute="UserManagement" />
     </SafeAreaView>
   );
 };
@@ -387,6 +454,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  protectedBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  protectedBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -401,6 +481,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#94A3B8',
+  },
+  centerContainer: {
+    paddingVertical: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
   },
 });
 

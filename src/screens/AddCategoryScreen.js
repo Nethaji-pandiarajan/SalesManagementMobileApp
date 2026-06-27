@@ -10,6 +10,8 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../config/config';
 
 const AddCategoryScreen = ({ navigation, route }) => {
   const { category } = route.params || {};
@@ -17,34 +19,67 @@ const AddCategoryScreen = ({ navigation, route }) => {
   const [description, setDescription] = useState(category ? category.description : '');
   const [status, setStatus] = useState(category ? category.status : 'Active');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!categoryName) {
       Alert.alert('Error', 'Please fill in category name.');
       return;
     }
 
-    if (category) {
-      console.log('Updating category:', { ...category, categoryName, description, status });
-      Alert.alert('Success', 'Category updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
-    } else {
-      const newCategoryData = {
-        categoryId: Math.random().toString(36).substr(2, 9),
-        categoryName,
-        description,
-        status,
-        createdOn: new Date().toISOString(),
-        updatedOn: new Date().toISOString(),
-        createdBy: 'currentUser',
-        orgId: 'org123',
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Error', 'Session expired. Please log in again.');
+        return;
+      }
+
+      const bodyData = {
+        category_name: categoryName,
+        description: description,
+        status: status === 'Active' ? 'ACTIVE' : 'INACTIVE',
       };
 
-      console.log('Saving new category:', newCategoryData);
+      if (category) {
+        // PUT request to update
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/categories/${category.categoryId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(bodyData),
+        });
 
-      Alert.alert('Success', 'Category added successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+        const data = await response.json();
+        if (response.ok) {
+          Alert.alert('Success', 'Category updated successfully!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        } else {
+          Alert.alert('Error', data.error || 'Failed to update category.');
+        }
+      } else {
+        // POST request to create
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/categories`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(bodyData),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          Alert.alert('Success', 'Category added successfully!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        } else {
+          Alert.alert('Error', data.error || 'Failed to add category.');
+        }
+      }
+    } catch (err) {
+      console.error('Save category error:', err);
+      Alert.alert('Error', 'Network error. Failed to save category.');
     }
   };
 

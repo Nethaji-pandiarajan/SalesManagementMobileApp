@@ -49,7 +49,7 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     }
   }, [isOpen, fadeAnim, slideAnim]);
 
-  const isAdmin = userData?.role === 'admin';
+  const isAdmin = userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin';
 
   const adminMenuItems = [
     { name: 'Dashboard', icon: '⌂', route: 'AdminDashboard' },
@@ -58,7 +58,7 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     { name: 'Supply Management', icon: '🚚', route: 'SupplyManagement' },
     { name: 'Sales Reports', icon: '📊', route: 'Reports' },
     { name: 'EOD Reconciliation', icon: '💰', route: 'AdminEOD' },
-    { name: 'Vehicles', icon: '🚚', route: 'Vehicles' },
+    { name: 'Vehicles', icon: '🚚', route: 'AdminVehicleList' },
   ];
 
   const executiveMenuItems = [
@@ -66,8 +66,7 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     { name: 'Inventory', icon: '☷', route: 'Inventory' },
     { name: 'Shops', icon: '⚲', route: 'Shops' },
     { name: 'Reports', icon: '◫', route: 'Reports' },
-    { name: 'Sales audit', icon: '◈', route: 'Reconciliation' },
-    { name: 'Vehicles', icon: '🚚', route: 'Vehicles' },
+    { name: 'Sales audit', icon: '◈', route: 'UserSalesAudit' },
   ];
 
   const menuItems = isAdmin ? adminMenuItems : executiveMenuItems;

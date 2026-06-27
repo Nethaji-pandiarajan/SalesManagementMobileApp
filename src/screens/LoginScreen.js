@@ -28,12 +28,17 @@ const LoginScreen = () => {
     let valid = true;
     const newErrors = { email: '', password: '' };
 
-    if (!email.trim()) {
+    const emailVal = email.trim();
+    if (!emailVal) {
       newErrors.email = 'Email or username is required';
       valid = false;
-    } else if (email.trim().toLowerCase() !== 'admin' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      newErrors.email = 'Enter a valid email address';
-      valid = false;
+    } else {
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);
+      const isUsername = /^[a-zA-Z0-9_]+$/.test(emailVal);
+      if (!isEmail && !isUsername) {
+        newErrors.email = 'Enter a valid email address or username';
+        valid = false;
+      }
     }
 
     if (!password) {
@@ -54,16 +59,6 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       const emailValue = email.trim().toLowerCase();
-
-      // Mock Admin Login Intercept
-      if (emailValue === 'admin') {
-        setTimeout(async () => {
-          await login('mock-admin-token-12345', { role: 'admin', email: 'admin' });
-          setLoading(false);
-        }, 800); // simulate network delay
-        return;
-      }
-
       const backendUrl = CONFIG.API_BASE_URL;
 
       console.log('🚀 Sending login to:', `${backendUrl}/login`);
