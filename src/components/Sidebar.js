@@ -56,6 +56,7 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     { name: 'Product Management', icon: '📦', route: 'ProductManagement' },
     { name: 'User Management', icon: '👥', route: 'UserManagement' },
     { name: 'Supply Management', icon: '🚚', route: 'SupplyManagement' },
+    { name: 'Preorders', icon: '📝', route: 'Preorder' },
     { name: 'Sales Reports', icon: '📊', route: 'Reports' },
     { name: 'EOD Reconciliation', icon: '💰', route: 'AdminEOD' },
     { name: 'Vehicles', icon: '🚚', route: 'AdminVehicleList' },
@@ -65,6 +66,7 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
     { name: 'Dashboard', icon: '⌂', route: 'Dashboard' },
     { name: 'Inventory', icon: '☷', route: 'Inventory' },
     { name: 'Shops', icon: '⚲', route: 'Shops' },
+    { name: 'Preorders', icon: '📝', route: 'Preorder' },
     { name: 'Reports', icon: '◫', route: 'Reports' },
     { name: 'Sales audit', icon: '◈', route: 'UserSalesAudit' },
   ];
@@ -85,9 +87,11 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
 
   return (
     <View style={[styles.overlayContainer, { pointerEvents: isOpen ? 'auto' : 'none' }]}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
-      </TouchableWithoutFeedback>
+      <Animated.View 
+        style={[styles.backdrop, { opacity: fadeAnim }]} 
+        onStartShouldSetResponder={() => true}
+        onResponderRelease={onClose}
+      />
 
       <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
         <View style={styles.sidebarHeader}>
@@ -128,11 +132,19 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
 
 const styles = StyleSheet.create({
   overlayContainer: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1000,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: width,
+    height: height,
+    zIndex: 9999,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: width,
+    height: height,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
   },
   sidebar: {

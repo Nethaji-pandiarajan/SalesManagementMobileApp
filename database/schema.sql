@@ -172,3 +172,26 @@ CREATE TABLE payments (
     driver_id INT REFERENCES driver(driver_id),
     org_id INT REFERENCES organizations(org_id)
 );
+
+-- 13. Preorders (For shop-centric advance orders)
+CREATE TABLE preorders (
+    preorder_id SERIAL PRIMARY KEY,
+    shop_id INT NOT NULL REFERENCES shops(shop_id) ON DELETE CASCADE,
+    sales_executive VARCHAR(255) NOT NULL,
+    total_amount DECIMAL(12, 2) NOT NULL CHECK (total_amount >= 0),
+    preorder_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    delivery_date DATE NOT NULL,
+    status VARCHAR(50) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'COMPLETED', 'CANCELLED')),
+    org_id INT REFERENCES organizations(org_id)
+);
+
+-- 14. Preorder Items (For multiple items within a single preorder)
+CREATE TABLE preorder_items (
+    preorder_item_id SERIAL PRIMARY KEY,
+    preorder_id INT NOT NULL REFERENCES preorders(preorder_id) ON DELETE CASCADE,
+    product_name VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    amount DECIMAL(12, 2) NOT NULL CHECK (amount >= 0),
+    org_id INT REFERENCES organizations(org_id)
+);
+

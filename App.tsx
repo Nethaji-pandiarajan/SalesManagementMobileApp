@@ -29,6 +29,8 @@ import AddCategoryScreen from './src/screens/AddCategoryScreen';
 import ProductListScreen from './src/screens/ProductListScreen';
 import AddProductScreen from './src/screens/AddProductScreen';
 import UserSalesAudit from './src/screens/UserSalesAudit';
+import PreorderScreen from './src/screens/PreorderScreen';
+import PreorderDetailScreen from './src/screens/PreorderDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -69,6 +71,8 @@ function RootNavigator() {
             <Stack.Screen name="Reports" component={ReportsScreen} />
             <Stack.Screen name="Reconciliation" component={ReconciliationScreen} />
             <Stack.Screen name="UserSalesAudit" component={UserSalesAudit} />
+            <Stack.Screen name="Preorder" component={PreorderScreen} />
+            <Stack.Screen name="PreorderDetail" component={PreorderDetailScreen} />
             <Stack.Screen name="Vehicles" component={VehicleListScreen} />
             <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
             {/* Product Management Screens */}
