@@ -72,7 +72,8 @@ const UserSalesAudit = ({ navigation, route }) => {
       
       const stockMap = {};
       activeTripData.inventory.forEach(item => {
-        stockMap[item.id] = item.actual || '';
+        const val = item.actual || '';
+        stockMap[item.id] = (val && !isNaN(val)) ? String(parseFloat(val)) : val;
       });
       setActualStockInput(stockMap);
 
@@ -111,17 +112,29 @@ const UserSalesAudit = ({ navigation, route }) => {
   };
 
   const handleCashChange = (val) => {
-    setActualCashInput(val);
+    let cleanVal = val;
+    if (val.length > 1 && val.startsWith('0') && val[1] !== '.') {
+      cleanVal = val.slice(1);
+    }
+    setActualCashInput(cleanVal);
   };
 
   const handleUpiChange = (val) => {
-    setActualUpiInput(val);
+    let cleanVal = val;
+    if (val.length > 1 && val.startsWith('0') && val[1] !== '.') {
+      cleanVal = val.slice(1);
+    }
+    setActualUpiInput(cleanVal);
   };
 
   const handleStockChange = (prodId, val) => {
+    let cleanVal = val;
+    if (val.length > 1 && val.startsWith('0') && val[1] !== '.') {
+      cleanVal = val.slice(1);
+    }
     setActualStockInput(prev => ({
       ...prev,
-      [prodId]: val
+      [prodId]: cleanVal
     }));
   };
 
@@ -294,7 +307,7 @@ const UserSalesAudit = ({ navigation, route }) => {
             <View style={[styles.financeCard, styles.borderGreen]}>
               <Text style={styles.financeLabel}>Total Sales</Text>
               <Text style={[styles.financeValue, styles.textGreen]}>
-                ₹{(auditData.summary?.total_sales_amount || 0).toLocaleString('en-IN')}
+                ₹{Number(auditData.summary?.total_sales_amount || 0).toLocaleString('en-IN')}
               </Text>
               <Text style={styles.financeSub}>{auditData.summary?.shops_visited || 0} Invoices</Text>
             </View>
@@ -302,7 +315,7 @@ const UserSalesAudit = ({ navigation, route }) => {
             <View style={[styles.financeCard, styles.borderEmerald]}>
               <Text style={styles.financeLabel}>Total Collected</Text>
               <Text style={[styles.financeValue, styles.textEmerald]}>
-                ₹{(auditData.summary?.total_amount_collected || 0).toLocaleString('en-IN')}
+                ₹{Number(auditData.summary?.total_amount_collected || 0).toLocaleString('en-IN')}
               </Text>
               <Text style={styles.financeSub}>All payment types</Text>
             </View>
@@ -310,7 +323,7 @@ const UserSalesAudit = ({ navigation, route }) => {
             <View style={[styles.financeCard, styles.borderTeal]}>
               <Text style={styles.financeLabel}>Expected Cash</Text>
               <Text style={[styles.financeValue, styles.textTeal]}>
-                ₹{(auditData.summary?.cash_in_hand || 0).toLocaleString('en-IN')}
+                ₹{Number(auditData.summary?.cash_in_hand || 0).toLocaleString('en-IN')}
               </Text>
               <Text style={styles.financeSub}>System cash total</Text>
             </View>
@@ -318,7 +331,7 @@ const UserSalesAudit = ({ navigation, route }) => {
             <View style={[styles.financeCard, styles.borderTeal]}>
               <Text style={styles.financeLabel}>Expected UPI</Text>
               <Text style={[styles.financeValue, styles.textTeal]}>
-                ₹{(auditData.summary?.upi_in_hand || 0).toLocaleString('en-IN')}
+                ₹{Number(auditData.summary?.upi_in_hand || 0).toLocaleString('en-IN')}
               </Text>
               <Text style={styles.financeSub}>System UPI total</Text>
             </View>
@@ -326,7 +339,7 @@ const UserSalesAudit = ({ navigation, route }) => {
             <View style={[styles.financeCard, styles.borderRed]}>
               <Text style={styles.financeLabel}>Pending Balance</Text>
               <Text style={[styles.financeValue, styles.textRed]}>
-                ₹{(auditData.summary?.total_pending_amount || 0).toLocaleString('en-IN')}
+                ₹{Number(auditData.summary?.total_pending_amount || 0).toLocaleString('en-IN')}
               </Text>
               <Text style={styles.financeSub}>Credit sales amount</Text>
             </View>
@@ -342,7 +355,7 @@ const UserSalesAudit = ({ navigation, route }) => {
             <View style={styles.inputRow}>
               <View style={styles.inputLabelCol}>
                 <Text style={styles.inputTitleText}>Physical Cash Handed Over</Text>
-                <Text style={styles.inputSubText}>Actual cash handed over (Expected: ₹{(auditData.summary?.cash_in_hand || 0).toLocaleString('en-IN')})</Text>
+                <Text style={styles.inputSubText}>Actual cash handed over (Expected: ₹{Number(auditData.summary?.cash_in_hand || 0).toLocaleString('en-IN')})</Text>
               </View>
               <View style={styles.inputBoxCol}>
                 {isEditable ? (
@@ -353,10 +366,11 @@ const UserSalesAudit = ({ navigation, route }) => {
                     placeholderTextColor="#94A3B8"
                     value={actualCashInput}
                     onChangeText={handleCashChange}
+                    selectTextOnFocus={true}
                   />
                 ) : (
                   <Text style={styles.readOnlyHandoverText}>
-                    ₹{(auditData.actual_cash || 0).toLocaleString('en-IN')}
+                    ₹{Number(auditData.actual_cash || 0).toLocaleString('en-IN')}
                   </Text>
                 )}
               </View>
@@ -365,7 +379,7 @@ const UserSalesAudit = ({ navigation, route }) => {
             <View style={[styles.inputRow, styles.noBorder]}>
               <View style={styles.inputLabelCol}>
                 <Text style={styles.inputTitleText}>UPI Payments Received</Text>
-                <Text style={styles.inputSubText}>Total QR payments (Expected: ₹{(auditData.summary?.upi_in_hand || 0).toLocaleString('en-IN')})</Text>
+                <Text style={styles.inputSubText}>Total QR payments (Expected: ₹{Number(auditData.summary?.upi_in_hand || 0).toLocaleString('en-IN')})</Text>
               </View>
               <View style={styles.inputBoxCol}>
                 {isEditable ? (
@@ -376,10 +390,11 @@ const UserSalesAudit = ({ navigation, route }) => {
                     placeholderTextColor="#94A3B8"
                     value={actualUpiInput}
                     onChangeText={handleUpiChange}
+                    selectTextOnFocus={true}
                   />
                 ) : (
                   <Text style={styles.readOnlyHandoverText}>
-                    ₹{(auditData.actual_upi || 0).toLocaleString('en-IN')}
+                    ₹{Number(auditData.actual_upi || 0).toLocaleString('en-IN')}
                   </Text>
                 )}
               </View>
@@ -410,9 +425,14 @@ const UserSalesAudit = ({ navigation, route }) => {
               (auditData.products_breakdown || []).map((prod, index) => {
                 const isOdd = index % 2 !== 0;
                 const prodId = prod.product_id.toString();
-                const actualVal = isEditable 
+                const rawActualVal = isEditable 
                   ? (actualStockInput[prodId] || '') 
                   : (activeTrip?.inventory?.find(item => item.id === prodId)?.actual || '—');
+                
+                // Strip trailing zeros from display if it's a numeric string
+                const displayActualVal = (rawActualVal && rawActualVal !== '—') 
+                  ? String(parseFloat(rawActualVal)) 
+                  : rawActualVal;
 
                 return (
                   <View
@@ -426,13 +446,13 @@ const UserSalesAudit = ({ navigation, route }) => {
                       <Text style={styles.productSKU}>{prod.sku_code || 'N/A'}</Text>
                     </View>
                     <Text style={[styles.tableCell, styles.textCenter, styles.flex0_7]}>
-                      {prod.quantity_loaded}
+                      {parseFloat(prod.quantity_loaded || 0)}
                     </Text>
                     <Text style={[styles.tableCell, styles.textCenter, styles.flex0_7_bold_green]}>
-                      {prod.quantity_sold}
+                      {parseFloat(prod.quantity_sold || 0)}
                     </Text>
                     <Text style={[styles.tableCell, styles.textCenter, styles.flex0_7_bold]}>
-                      {prod.quantity_remaining}
+                      {parseFloat(prod.quantity_remaining || 0)}
                     </Text>
                     <View style={styles.flex0_9_end}>
                       {isEditable ? (
@@ -441,12 +461,13 @@ const UserSalesAudit = ({ navigation, route }) => {
                           keyboardType="numeric"
                           placeholder="Qty"
                           placeholderTextColor="#94A3B8"
-                          value={actualVal}
+                          value={rawActualVal}
                           onChangeText={(val) => handleStockChange(prodId, val)}
+                          selectTextOnFocus={true}
                         />
                       ) : (
                         <Text style={[styles.tableCell, styles.textRight, styles.physicalTextClosed]}>
-                          {actualVal} {prod.unit || 'L'}
+                          {displayActualVal} {prod.unit || 'L'}
                         </Text>
                       )}
                     </View>
@@ -499,7 +520,7 @@ const UserSalesAudit = ({ navigation, route }) => {
             <View style={styles.verificationCard}>
               <Text style={styles.verificationCardTitle}>💡 Driver Self-Audit Check</Text>
               <Text style={styles.verificationCardText}>
-                Ensure physical cash matches "Expected Cash" (₹{(auditData.summary?.cash_in_hand || 0).toLocaleString('en-IN')}) and physical stock matches expected remaining inventory before submitting EOD.
+                Ensure physical cash matches "Expected Cash" (₹{Number(auditData.summary?.cash_in_hand || 0).toLocaleString('en-IN')}) and physical stock matches expected remaining inventory before submitting EOD.
               </Text>
             </View>
           )}

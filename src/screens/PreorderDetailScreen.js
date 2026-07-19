@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width } = Dimensions.get('window');
 
 const PreorderDetailScreen = ({ navigation, route }) => {
-  const { preorder, onStatusChange, onDelete } = route.params || {};
+  const { preorder, onStatusChange, onDelete, onEdit } = route.params || {};
   const [status, setStatus] = useState(preorder?.status || 'PENDING');
 
   if (!preorder) {
@@ -79,9 +79,15 @@ const PreorderDetailScreen = ({ navigation, route }) => {
           <Text style={styles.headerTitle} numberOfLines={1}>{preorder.shop_name}</Text>
           <Text style={styles.headerSubtitle}>Preorder Details</Text>
         </View>
-        <TouchableOpacity style={[styles.statusPill, badge]} onPress={handleToggleStatus}>
-          <Text style={[styles.statusPillText, badgeText]}>{status}</Text>
-        </TouchableOpacity>
+        {preorder.is_deleted ? (
+          <View style={[styles.statusPill, { backgroundColor: '#FEE2E2' }]}>
+            <Text style={[styles.statusPillText, { color: '#EF4444' }]}>DELETED</Text>
+          </View>
+        ) : (
+          <TouchableOpacity style={[styles.statusPill, badge]} onPress={handleToggleStatus}>
+            <Text style={[styles.statusPillText, badgeText]}>{status}</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -174,20 +180,30 @@ const PreorderDetailScreen = ({ navigation, route }) => {
         </View>
 
         {/* Actions */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.editBtn]}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.editBtnText}>✎  Edit Preorder</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.deleteBtn]}
-            onPress={handleDelete}
-          >
-            <Text style={styles.deleteBtnText}>🗑  Delete</Text>
-          </TouchableOpacity>
-        </View>
+        {!preorder.is_deleted && (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.editBtn]}
+              onPress={() => {
+                if (onEdit) {
+                  onEdit(preorder);
+                } else {
+                  navigation.goBack();
+                }
+              }}
+            >
+              <Text style={styles.editBtnText}>✎  Edit Preorder</Text>
+            </TouchableOpacity>
+            {(!preorder.status || preorder.status !== 'COMPLETED' || isAdmin) && (
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.deleteBtn]}
+                onPress={handleDelete}
+              >
+                <Text style={styles.deleteBtnText}>🗑  Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

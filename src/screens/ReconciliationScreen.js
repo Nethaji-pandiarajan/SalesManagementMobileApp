@@ -364,7 +364,7 @@ const ReconciliationScreen = ({ navigation, route }) => {
 
                   return (
                     <TouchableOpacity
-                      key={req.driverName}
+                      key={req.supply_id}
                       style={styles.driverCard}
                       onPress={() => setSelectedDriver(req.driverName)}
                       activeOpacity={0.8}
@@ -568,7 +568,7 @@ const ReconciliationScreen = ({ navigation, route }) => {
                     <View>
                       <Text style={styles.loggedShortageHeading}>LOGGED SHORTAGES AGAINST {req.driverName.toUpperCase()}:</Text>
                       {req.flaggedDiscrepancies.map((desc, dIdx) => (
-                        <View key={dIdx} style={styles.shortageItemRow}>
+                        <View key={`${dIdx}-${desc}`} style={styles.shortageItemRow}>
                           <Text style={styles.shortageIcon}>⚠️</Text>
                           <Text style={styles.shortageDescText}>{desc}</Text>
                         </View>

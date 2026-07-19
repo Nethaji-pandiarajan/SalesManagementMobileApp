@@ -18,6 +18,7 @@ import Sidebar from '../components/Sidebar';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
 import CONFIG from '../config/config';
+import DatePickerModal from '../components/DatePickerModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -69,6 +70,7 @@ const PreorderScreen = ({ navigation, route }) => {
   
   // Sales executive name is resolved from auth session or route params
   const executiveName = userData?.name || userData?.email?.split('@')[0] || username || 'Sales Executive';
+  const isAdmin = userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin';
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,6 +94,9 @@ const PreorderScreen = ({ navigation, route }) => {
   const [amount, setAmount] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [preorderStatus, setPreorderStatus] = useState('PENDING');
+  const [preorderPaidAmount, setPreorderPaidAmount] = useState('0');
+  const [preorderPaymentType, setPreorderPaymentType] = useState('CASH');
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   // Category & Product Cascade States
   const [categories, setCategories] = useState([]);
@@ -112,22 +117,27 @@ const PreorderScreen = ({ navigation, route }) => {
   const loadPreorders = async () => {
     setLoading(true);
     try {
-      const stored = await AsyncStorage.getItem('user_preorders');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Migration check: if legacy customer_name exists, reset to shop-centric INITIAL_PREORDERS
-        if (parsed.length > 0 && (parsed[0].customer_name || !parsed[0].shop_name)) {
-          setPreorders(INITIAL_PREORDERS);
-          await AsyncStorage.setItem('user_preorders', JSON.stringify(INITIAL_PREORDERS));
-        } else {
-          setPreorders(parsed);
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/preorders`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setPreorders(data);
       } else {
-        setPreorders(INITIAL_PREORDERS);
-        await AsyncStorage.setItem('user_preorders', JSON.stringify(INITIAL_PREORDERS));
+        Alert.alert('Error', data.error || 'Failed to load preorders.');
       }
     } catch (e) {
       console.error('Error loading preorders:', e);
+      Alert.alert('Error', 'Network error. Unable to load preorders.');
     } finally {
       setLoading(false);
     }
@@ -213,61 +223,56 @@ const PreorderScreen = ({ navigation, route }) => {
       return;
     }
 
-    const totalAmount = preorderItems.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
 
-    if (editingPreorderId) {
-      // Edit mode (Update)
-      const updated = preorders.map(item => {
-        if (item.preorder_id === editingPreorderId) {
-          return {
-            ...item,
-            shop_id: selectedShopId,
-            shop_name: selectedShopName,
-            sales_executive: executiveName,
-            amount: totalAmount,
-            delivery_date: deliveryDate.trim(),
-            status: preorderStatus,
-            items: preorderItems,
-          };
-        }
-        return item;
-      });
-
-      try {
-        setPreorders(updated);
-        await AsyncStorage.setItem('user_preorders', JSON.stringify(updated));
-        setIsModalOpen(false);
-        resetForm();
-        Alert.alert('Success', 'Preorder updated successfully!');
-      } catch (e) {
-        console.error('Error updating preorder:', e);
-        Alert.alert('Error', 'Failed to update preorder.');
-      }
-    } else {
-      // Add mode (Create)
-      const newPreorder = {
-        preorder_id: 'pre_' + Date.now(),
-        shop_id: selectedShopId,
-        shop_name: selectedShopName,
-        sales_executive: executiveName,
-        amount: totalAmount,
-        preorder_date: new Date().toISOString().split('T')[0],
+      const payload = {
+        shop_id: parseInt(selectedShopId, 10),
         delivery_date: deliveryDate.trim(),
-        status: 'PENDING',
-        items: preorderItems,
+        status: preorderStatus,
+        paid_amount: preorderStatus === 'COMPLETED' ? parseFloat(preorderPaidAmount || 0) : 0,
+        payment_type: preorderStatus === 'COMPLETED' ? preorderPaymentType : 'CREDIT',
+        items: preorderItems.map(item => ({
+          product_id: parseInt(item.product_id, 10),
+          quantity: parseFloat(item.quantity),
+          rate: parseFloat(item.amount) / parseFloat(item.quantity)
+        }))
       };
 
-      try {
-        const updated = [newPreorder, ...preorders];
-        setPreorders(updated);
-        await AsyncStorage.setItem('user_preorders', JSON.stringify(updated));
+      let response;
+      if (editingPreorderId) {
+        response = await fetch(`${CONFIG.API_BASE_URL}/api/preorders/${editingPreorderId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        response = await fetch(`${CONFIG.API_BASE_URL}/api/preorders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      const data = await response.json();
+      if (response.ok) {
         setIsModalOpen(false);
         resetForm();
-        Alert.alert('Success', 'Preorder added successfully!');
-      } catch (e) {
-        console.error('Error adding preorder:', e);
-        Alert.alert('Error', 'Failed to save preorder.');
+        loadPreorders();
+        Alert.alert('Success', editingPreorderId ? 'Preorder updated successfully!' : 'Preorder added successfully!');
+      } else {
+        Alert.alert('Error', data.error || 'Failed to save preorder.');
       }
+    } catch (e) {
+      console.error('Error saving preorder:', e);
+      Alert.alert('Error', 'Network error. Failed to save preorder.');
     }
   };
 
@@ -285,6 +290,8 @@ const PreorderScreen = ({ navigation, route }) => {
     ]);
     setDeliveryDate(item.delivery_date);
     setPreorderStatus(item.status);
+    setPreorderPaidAmount('0');
+    setPreorderPaymentType('CASH');
     setIsModalOpen(true);
   };
 
@@ -298,13 +305,27 @@ const PreorderScreen = ({ navigation, route }) => {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const updated = preorders.filter(item => item.preorder_id !== id);
-            setPreorders(updated);
             try {
-              await AsyncStorage.setItem('user_preorders', JSON.stringify(updated));
-              Alert.alert('Success', 'Preorder deleted successfully!');
+              const token = await AsyncStorage.getItem('userToken');
+              if (!token) return;
+
+              const response = await fetch(`${CONFIG.API_BASE_URL}/api/preorders/${id}`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              const data = await response.json();
+              if (response.ok) {
+                loadPreorders();
+                Alert.alert('Success', 'Preorder deleted successfully!');
+              } else {
+                Alert.alert('Error', data.error || 'Failed to delete preorder.');
+              }
             } catch (e) {
               console.error('Error deleting preorder:', e);
+              Alert.alert('Error', 'Network error. Failed to delete preorder.');
             }
           }
         }
@@ -313,18 +334,31 @@ const PreorderScreen = ({ navigation, route }) => {
   };
 
   const toggleStatus = async (id) => {
-    const updated = preorders.map(item => {
-      if (item.preorder_id === id) {
-        const nextStatus = item.status === 'PENDING' ? 'COMPLETED' : item.status === 'COMPLETED' ? 'CANCELLED' : 'PENDING';
-        return { ...item, status: nextStatus };
-      }
-      return item;
-    });
-    setPreorders(updated);
+    const preorder = preorders.find(item => item.preorder_id === id);
+    if (!preorder) return;
+
+    const nextStatus = preorder.status === 'PENDING' ? 'COMPLETED' : preorder.status === 'COMPLETED' ? 'CANCELLED' : 'PENDING';
     try {
-      await AsyncStorage.setItem('user_preorders', JSON.stringify(updated));
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
+
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/preorders/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: nextStatus })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        loadPreorders();
+      } else {
+        Alert.alert('Error', data.error || 'Failed to update status.');
+      }
     } catch (e) {
       console.error('Error updating status:', e);
+      Alert.alert('Error', 'Network error. Failed to update status.');
     }
   };
 
@@ -343,6 +377,8 @@ const PreorderScreen = ({ navigation, route }) => {
     setAmount('');
     setDeliveryDate('');
     setPreorderStatus('PENDING');
+    setPreorderPaidAmount('0');
+    setPreorderPaymentType('CASH');
   };
 
   const filteredPreorders = preorders.filter(item => {
@@ -420,17 +456,51 @@ const PreorderScreen = ({ navigation, route }) => {
                 activeOpacity={0.85}
                 onPress={() => navigation.navigate('PreorderDetail', {
                   preorder: item,
-                  onStatusChange: (id, newStatus) => {
-                    const updated = preorders.map(p =>
-                      p.preorder_id === id ? { ...p, status: newStatus } : p
-                    );
-                    setPreorders(updated);
-                    AsyncStorage.setItem('user_preorders', JSON.stringify(updated)).catch(() => {});
+                  isAdmin: isAdmin,
+                  onStatusChange: async (id, newStatus) => {
+                    try {
+                      const token = await AsyncStorage.getItem('userToken');
+                      if (!token) return;
+                      await fetch(`${CONFIG.API_BASE_URL}/api/preorders/${id}/status`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ status: newStatus })
+                      });
+                      loadPreorders();
+                    } catch (e) {
+                      console.error('Error updating status from detail screen:', e);
+                    }
                   },
-                  onDelete: (id) => {
-                    const updated = preorders.filter(p => p.preorder_id !== id);
-                    setPreorders(updated);
-                    AsyncStorage.setItem('user_preorders', JSON.stringify(updated)).catch(() => {});
+                  onDelete: async (id) => {
+                    try {
+                      const token = await AsyncStorage.getItem('userToken');
+                      if (!token) return;
+                      const response = await fetch(`${CONFIG.API_BASE_URL}/api/preorders/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        }
+                      });
+                      const data = await response.json();
+                      if (response.ok) {
+                        loadPreorders();
+                      } else {
+                        Alert.alert('Error', data.error || 'Failed to delete preorder.');
+                      }
+                    } catch (e) {
+                      console.error('Error deleting preorder from detail screen:', e);
+                      Alert.alert('Error', 'Network error. Failed to delete preorder.');
+                    }
+                  },
+                  onEdit: (orderToEdit) => {
+                    navigation.goBack();
+                    setTimeout(() => {
+                      startEditPreorder(orderToEdit);
+                    }, 300);
                   },
                 })}
               >
@@ -447,20 +517,26 @@ const PreorderScreen = ({ navigation, route }) => {
                       <Text style={styles.dateSubtext}>Date: {item.preorder_date}</Text>
                     </View>
                   </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.statusBadge,
-                      item.status === 'COMPLETED' ? styles.statusCompleted : item.status === 'CANCELLED' ? styles.statusCancelled : styles.statusPending
-                    ]}
-                    onPress={() => toggleStatus(item.preorder_id)}
-                  >
-                    <Text style={[
-                      styles.statusBadgeText,
-                      item.status === 'COMPLETED' ? styles.statusCompletedText : item.status === 'CANCELLED' ? styles.statusCancelledText : styles.statusPendingText
-                    ]}>
-                      {item.status}
-                    </Text>
-                  </TouchableOpacity>
+                  {item.is_deleted ? (
+                    <View style={[styles.statusBadge, { backgroundColor: '#FEE2E2' }]}>
+                      <Text style={[styles.statusBadgeText, { color: '#EF4444' }]}>DELETED</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[
+                        styles.statusBadge,
+                        item.status === 'COMPLETED' ? styles.statusCompleted : item.status === 'CANCELLED' ? styles.statusCancelled : styles.statusPending
+                      ]}
+                      onPress={() => toggleStatus(item.preorder_id)}
+                    >
+                      <Text style={[
+                        styles.statusBadgeText,
+                        item.status === 'COMPLETED' ? styles.statusCompletedText : item.status === 'CANCELLED' ? styles.statusCancelledText : styles.statusPendingText
+                      ]}>
+                        {item.status}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 <View style={styles.cardDivider} />
@@ -487,22 +563,28 @@ const PreorderScreen = ({ navigation, route }) => {
                   </View>
                 </View>
 
-                <View style={styles.cardDivider} />
+                {!item.is_deleted && (
+                  <>
+                    <View style={styles.cardDivider} />
 
-                <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.editBtn]}
-                    onPress={() => startEditPreorder(item)}
-                  >
-                    <Text style={styles.editBtnText}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.deleteBtn]}
-                    onPress={() => handleDeletePreorder(item.preorder_id)}
-                  >
-                    <Text style={styles.deleteBtnText}>Delete</Text>
-                  </TouchableOpacity>
-                </View>
+                    <View style={styles.cardActions}>
+                      <TouchableOpacity
+                        style={[styles.actionBtn, styles.editBtn]}
+                        onPress={() => startEditPreorder(item)}
+                      >
+                        <Text style={styles.editBtnText}>Edit</Text>
+                      </TouchableOpacity>
+                      {(!item.status || item.status !== 'COMPLETED' || isAdmin) && (
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.deleteBtn]}
+                          onPress={() => handleDeletePreorder(item.preorder_id)}
+                        >
+                          <Text style={styles.deleteBtnText}>Delete</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </>
+                )}
               </TouchableOpacity>
             ))}
 
@@ -707,13 +789,15 @@ const PreorderScreen = ({ navigation, route }) => {
 
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Delivery Date</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor="#94A3B8"
-                      value={deliveryDate}
-                      onChangeText={setDeliveryDate}
-                    />
+                    <TouchableOpacity
+                      style={[styles.input, { justifyContent: 'center' }]}
+                      activeOpacity={0.7}
+                      onPress={() => setIsDatePickerOpen(true)}
+                    >
+                      <Text style={{ color: deliveryDate ? '#1E293B' : '#94A3B8', fontSize: 14 }}>
+                        {deliveryDate || 'Select delivery date (YYYY-MM-DD)'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
 
                   {editingPreorderId && (
@@ -745,11 +829,61 @@ const PreorderScreen = ({ navigation, route }) => {
                     </View>
                   )}
 
+                  {preorderStatus === 'COMPLETED' && (
+                    <>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Paid Amount (₹)</Text>
+                        <TextInput
+                          style={styles.input}
+                          keyboardType="numeric"
+                          placeholder="Enter amount paid"
+                          placeholderTextColor="#94A3B8"
+                          value={preorderPaidAmount}
+                          selectTextOnFocus={true}
+                          onChangeText={(txt) => {
+                            const cleaned = txt.replace(/^0+/, '');
+                            setPreorderPaidAmount(cleaned === '' ? '0' : cleaned);
+                          }}
+                        />
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Payment Type</Text>
+                        <View style={styles.statusSelectContainer}>
+                          {['CASH', 'UPI'].map((type) => (
+                            <TouchableOpacity
+                              key={type}
+                              style={[
+                                styles.statusSelectBtn,
+                                preorderPaymentType === type && styles.statusSelectPending
+                              ]}
+                              onPress={() => setPreorderPaymentType(type)}
+                            >
+                              <Text style={[
+                                styles.statusSelectBtnText,
+                                preorderPaymentType === type && styles.statusSelectPendingText
+                              ]}>
+                                {type}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    </>
+                  )}
+
                   <TouchableOpacity style={styles.saveBtn} onPress={handleSavePreorder}>
                     <Text style={styles.saveBtnText}>
                       {editingPreorderId ? 'Update Preorder' : 'Save Preorder'}
                     </Text>
                   </TouchableOpacity>
+
+                  <DatePickerModal
+                    isOpen={isDatePickerOpen}
+                    onClose={() => setIsDatePickerOpen(false)}
+                    selectedDate={deliveryDate}
+                    onSelectDate={(date) => setDeliveryDate(date)}
+                  />
                 </ScrollView>
               </>
             ) : (

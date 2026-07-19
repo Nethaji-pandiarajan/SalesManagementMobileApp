@@ -44,7 +44,14 @@ const BillingScreen = ({ navigation, route }) => {
         return;
       }
 
-      const response = await fetch(`${CONFIG.API_BASE_URL}/api/products`, {
+      if (!supply_id) {
+        setFetchError('No active trip found. Cannot load products.');
+        setLoadingProducts(false);
+        return;
+      }
+
+      // Fetch ONLY products loaded in this specific supply/trip
+      const response = await fetch(`${CONFIG.API_BASE_URL}/api/products/supply/${supply_id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -62,7 +69,8 @@ const BillingScreen = ({ navigation, route }) => {
             name: p.product_name,
             price: p.rate,
             sku_code: p.sku_code,
-            unit: p.unit
+            unit: p.unit,
+            quantity_loaded: p.quantity_loaded,
           }))
         }));
 
@@ -74,8 +82,8 @@ const BillingScreen = ({ navigation, route }) => {
         setFetchError(data.error || 'Failed to load products.');
       }
     } catch (err) {
-      console.error('Fetch products catalog error:', err);
-      setFetchError('Network error. Unable to load products catalog.');
+      console.error('Fetch supply products error:', err);
+      setFetchError('Network error. Unable to load products.');
     } finally {
       setLoadingProducts(false);
     }
@@ -121,8 +129,8 @@ const BillingScreen = ({ navigation, route }) => {
   const liveBalance = previousBalance + totalBill - currentPaid;
 
   const handleFinish = async () => {
-    if (selectedProducts.length === 0) {
-      Alert.alert('No Products', 'Please add at least one product before finishing the transaction.');
+    if (selectedProducts.length === 0 && currentPaid <= 0) {
+      Alert.alert('No Transaction Data', 'Please select at least one product or enter a paid amount.');
       return;
     }
 
@@ -353,19 +361,17 @@ const BillingScreen = ({ navigation, route }) => {
         <TouchableOpacity
           style={[
             styles.finishBtn,
-            (selectedProducts.length === 0 || !paidAmount || paidAmount.trim() === '' || isSubmitting) && styles.finishBtnDisabled,
+            (isSubmitting || (selectedProducts.length === 0 && currentPaid <= 0)) && styles.finishBtnDisabled,
           ]}
           onPress={handleFinish}
-          disabled={selectedProducts.length === 0 || !paidAmount || paidAmount.trim() === '' || isSubmitting}
+          disabled={isSubmitting || (selectedProducts.length === 0 && currentPaid <= 0)}
         >
           {isSubmitting ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.finishBtnText}>
               {selectedProducts.length === 0
-                ? 'Add Products to Finish'
-                : (!paidAmount || paidAmount.trim() === '')
-                ? 'Enter Paid Amount'
+                ? (currentPaid > 0 ? 'Record Payment Only' : 'Add Products or Enter Payment')
                 : 'Finish Transaction'}
             </Text>
           )}

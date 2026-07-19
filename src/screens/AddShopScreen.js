@@ -50,8 +50,12 @@ const AddShopScreen = ({ navigation }) => {
 
       const data = await response.json();
       if (response.ok) {
-        const rawAreas = data.areas_covered || '';
-        const list = rawAreas.split(',').map(a => a.trim()).filter(Boolean);
+        let list = [];
+        if (Array.isArray(data.areas_covered)) {
+          list = data.areas_covered;
+        } else if (typeof data.areas_covered === 'string') {
+          list = data.areas_covered.split(',').map(a => a.trim()).filter(Boolean);
+        }
         setAssignedAreas(list);
         if (list.length > 0) {
           setAreaName(list[0]);

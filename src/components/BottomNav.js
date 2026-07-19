@@ -18,6 +18,7 @@ const BottomNav = ({ navigation, currentRoute }) => {
 
   const executiveTabs = [
     { name: 'Home', icon: '⌂', route: 'Dashboard' },
+    { name: 'Preorders', icon: '📝', route: 'Preorder' },
     { name: 'Inventory', icon: '☷', route: 'Inventory' },
     { name: 'Shops', icon: '⚲', route: 'Shops' },
     { name: 'Reports', icon: '◫', route: 'Reports' },
@@ -30,6 +31,7 @@ const BottomNav = ({ navigation, currentRoute }) => {
     <View style={styles.bottomTab}>
       {tabs.map((tab, index) => {
         const isActive = currentRoute === tab.route ||
+          (tab.route === 'Preorder' && (currentRoute === 'Preorders' || currentRoute === 'PreorderDetail')) ||
           (tab.route === 'AdminEOD' && currentRoute === 'Reconciliation') ||
           (tab.route === 'Reports' && currentRoute === 'AdminSalesReports') ||
           (tab.route === 'AdminDashboard' && currentRoute === 'Dashboard');
