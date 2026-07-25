@@ -559,7 +559,7 @@ const PreorderScreen = ({ navigation, route }) => {
                   </View>
                   <View style={[styles.detailRow, { marginTop: 4 }]}>
                     <Text style={[styles.detailLabel, { fontWeight: '700', color: '#1E293B' }]}>Total Amount:</Text>
-                    <Text style={[styles.detailValue, { fontWeight: '800', color: '#087E66', fontSize: 14 }]}>₹{item.amount.toLocaleString('en-IN')}</Text>
+                    <Text style={[styles.detailValue, { fontWeight: '800', color: '#087E66', fontSize: 14 }]}>₹{(Number(item.amount) || 0).toLocaleString('en-IN')}</Text>
                   </View>
                 </View>
 
@@ -663,7 +663,7 @@ const PreorderScreen = ({ navigation, route }) => {
                             {prod.quantity}
                           </Text>
                           <Text style={[styles.tableCol, styles.colAmt, { color: '#1E293B', textAlign: 'right', fontWeight: '600' }]}>
-                            ₹{prod.amount.toLocaleString('en-IN')}
+                            ₹{(Number(prod.amount) || 0).toLocaleString('en-IN')}
                           </Text>
                           <TouchableOpacity 
                             style={styles.removeItemBtn} 

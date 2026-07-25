@@ -11,11 +11,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 const PreorderDetailScreen = ({ navigation, route }) => {
-  const { preorder, onStatusChange, onDelete, onEdit } = route.params || {};
+  const { preorder, onStatusChange, onDelete, onEdit, isAdmin: isAdminParam } = route.params || {};
+  const { userData } = useAuth();
+  const isAdmin = isAdminParam !== undefined ? isAdminParam : (userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin');
   const [status, setStatus] = useState(preorder?.status || 'PENDING');
 
   if (!preorder) {
