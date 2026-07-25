@@ -114,6 +114,15 @@ const PreorderScreen = ({ navigation, route }) => {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    if (route.params?.refresh) {
+      loadPreorders();
+    }
+    if (route.params?.editPreorder) {
+      startEditPreorder(route.params.editPreorder);
+    }
+  }, [route.params]);
+
   const loadPreorders = async () => {
     setLoading(true);
     try {
@@ -457,51 +466,6 @@ const PreorderScreen = ({ navigation, route }) => {
                 onPress={() => navigation.navigate('PreorderDetail', {
                   preorder: item,
                   isAdmin: isAdmin,
-                  onStatusChange: async (id, newStatus) => {
-                    try {
-                      const token = await AsyncStorage.getItem('userToken');
-                      if (!token) return;
-                      await fetch(`${CONFIG.API_BASE_URL}/api/preorders/${id}/status`, {
-                        method: 'PATCH',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ status: newStatus })
-                      });
-                      loadPreorders();
-                    } catch (e) {
-                      console.error('Error updating status from detail screen:', e);
-                    }
-                  },
-                  onDelete: async (id) => {
-                    try {
-                      const token = await AsyncStorage.getItem('userToken');
-                      if (!token) return;
-                      const response = await fetch(`${CONFIG.API_BASE_URL}/api/preorders/${id}`, {
-                        method: 'DELETE',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${token}`
-                        }
-                      });
-                      const data = await response.json();
-                      if (response.ok) {
-                        loadPreorders();
-                      } else {
-                        Alert.alert('Error', data.error || 'Failed to delete preorder.');
-                      }
-                    } catch (e) {
-                      console.error('Error deleting preorder from detail screen:', e);
-                      Alert.alert('Error', 'Network error. Failed to delete preorder.');
-                    }
-                  },
-                  onEdit: (orderToEdit) => {
-                    navigation.goBack();
-                    setTimeout(() => {
-                      startEditPreorder(orderToEdit);
-                    }, 300);
-                  },
                 })}
               >
                 {/* Card Header */}

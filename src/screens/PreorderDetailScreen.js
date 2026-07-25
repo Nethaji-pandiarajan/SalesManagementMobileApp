@@ -12,11 +12,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
+import CONFIG from '../config/config';
 
 const { width } = Dimensions.get('window');
 
 const PreorderDetailScreen = ({ navigation, route }) => {
-  const { preorder, onStatusChange, onDelete, onEdit, isAdmin: isAdminParam } = route.params || {};
+  const { preorder, isAdmin: isAdminParam } = route.params || {};
   const { userData } = useAuth();
   const isAdmin = isAdminParam !== undefined ? isAdminParam : (userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin');
   const [status, setStatus] = useState(preorder?.status || 'PENDING');
@@ -32,9 +33,14 @@ const PreorderDetailScreen = ({ navigation, route }) => {
     );
   }
 
-  const items = preorder.items || [];
-  const totalAmount = items.reduce((sum, i) => sum + parseFloat(i.amount || 0), 0);
-  const totalQty = items.reduce((sum, i) => sum + parseInt(i.quantity || 0, 10), 0);
+  const items = Array.isArray(preorder?.items)
+    ? preorder.items
+    : typeof preorder?.items === 'string'
+      ? (() => { try { const parsed = JSON.parse(preorder.items); return Array.isArray(parsed) ? parsed : []; } catch(e) { return []; } })()
+      : [];
+
+  const totalAmount = items.reduce((sum, i) => sum + (parseFloat(i?.amount) || 0), 0);
+  const totalQty = items.reduce((sum, i) => sum + (parseInt(i?.quantity, 10) || 0), 0);
 
   const getStatusStyle = (s) => {
     if (s === 'COMPLETED') return { badge: styles.statusCompleted, text: styles.statusCompletedText };
@@ -42,11 +48,25 @@ const PreorderDetailScreen = ({ navigation, route }) => {
     return { badge: styles.statusPending, text: styles.statusPendingText };
   };
 
-  const handleToggleStatus = () => {
+  const handleToggleStatus = async () => {
     const order = ['PENDING', 'COMPLETED', 'CANCELLED'];
     const next = order[(order.indexOf(status) + 1) % order.length];
     setStatus(next);
-    if (onStatusChange) onStatusChange(preorder.preorder_id, next);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (token) {
+        await fetch(`${CONFIG.API_BASE_URL}/api/preorders/${preorder.preorder_id}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: next })
+        });
+      }
+    } catch (e) {
+      console.error('Error updating status from detail screen:', e);
+    }
   };
 
   const handleDelete = () => {
@@ -58,13 +78,36 @@ const PreorderDetailScreen = ({ navigation, route }) => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            if (onDelete) onDelete(preorder.preorder_id);
-            navigation.goBack();
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('userToken');
+              if (token) {
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/preorders/${preorder.preorder_id}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                  Alert.alert('Error', data.error || 'Failed to delete preorder.');
+                  return;
+                }
+              }
+              navigation.navigate('Preorder', { refresh: true });
+            } catch (e) {
+              console.error('Error deleting preorder from detail screen:', e);
+              Alert.alert('Error', 'Network error. Failed to delete preorder.');
+            }
           },
         },
       ]
     );
+  };
+
+  const handleEdit = () => {
+    navigation.navigate('Preorder', { editPreorder: preorder });
   };
 
   const { badge, text: badgeText } = getStatusStyle(status);
@@ -187,13 +230,7 @@ const PreorderDetailScreen = ({ navigation, route }) => {
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={[styles.actionBtn, styles.editBtn]}
-              onPress={() => {
-                if (onEdit) {
-                  onEdit(preorder);
-                } else {
-                  navigation.goBack();
-                }
-              }}
+              onPress={handleEdit}
             >
               <Text style={styles.editBtnText}>✎  Edit Preorder</Text>
             </TouchableOpacity>

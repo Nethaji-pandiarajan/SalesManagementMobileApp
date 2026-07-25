@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createVehicle, getStoredToken, updateVehicle } from '../services/vehicleService';
 
 const AddVehicleScreen = ({ navigation }) => {
@@ -26,6 +25,7 @@ const AddVehicleScreen = ({ navigation }) => {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('ACTIVE');
   const [loading, setLoading] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
 
   useEffect(() => {
     if (existingVehicle) {
@@ -46,7 +46,7 @@ const AddVehicleScreen = ({ navigation }) => {
   }, [existingVehicle?.vehicle_id || existingVehicle?.vehicleId]);
 
   const handleSave = async () => {
-    if (!vehicleNo || !vehicleName) {
+    if (!vehicleNo.trim() || !vehicleName.trim()) {
       Alert.alert('Error', 'Please fill in vehicle number and name.');
       return;
     }
@@ -60,10 +60,10 @@ const AddVehicleScreen = ({ navigation }) => {
       }
 
       const payload = {
-        vehicleNo,
-        vehicleName,
-        vehicleOwner,
-        description,
+        vehicleNo: vehicleNo.trim(),
+        vehicleName: vehicleName.trim(),
+        vehicleOwner: vehicleOwner.trim() || null,
+        description: description.trim() || null,
         status,
       };
 
@@ -87,7 +87,7 @@ const AddVehicleScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -97,50 +97,65 @@ const AddVehicleScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>ADD NEW VEHICLE</Text>
+          <Text style={styles.headerTitle}>
+            {vehicleId ? 'EDIT VEHICLE DETAILS' : 'ADD NEW VEHICLE'}
+          </Text>
         </View>
+        <View style={styles.headerRight} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.formCard}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Vehicle Number</Text>
+            <Text style={styles.label}>Vehicle Number *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, focusedInput === 'vehicleNo' && styles.inputFocused]}
               placeholder="e.g. TN 01 AB 1234"
+              placeholderTextColor="#94A3B8"
               value={vehicleNo}
               onChangeText={setVehicleNo}
+              onFocus={() => setFocusedInput('vehicleNo')}
+              onBlur={() => setFocusedInput(null)}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Vehicle Name / Model</Text>
+            <Text style={styles.label}>Vehicle Name / Model *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, focusedInput === 'vehicleName' && styles.inputFocused]}
               placeholder="e.g. Tata Ace"
+              placeholderTextColor="#94A3B8"
               value={vehicleName}
               onChangeText={setVehicleName}
+              onFocus={() => setFocusedInput('vehicleName')}
+              onBlur={() => setFocusedInput(null)}
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Vehicle Owner</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, focusedInput === 'vehicleOwner' && styles.inputFocused]}
               placeholder="e.g. John Doe"
+              placeholderTextColor="#94A3B8"
               value={vehicleOwner}
               onChangeText={setVehicleOwner}
+              onFocus={() => setFocusedInput('vehicleOwner')}
+              onBlur={() => setFocusedInput(null)}
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Description</Text>
             <TextInput
-              style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+              style={[styles.input, { height: 80, textAlignVertical: 'top' }, focusedInput === 'description' && styles.inputFocused]}
               placeholder="Additional details..."
+              placeholderTextColor="#94A3B8"
               value={description}
               onChangeText={setDescription}
               multiline={true}
+              onFocus={() => setFocusedInput('description')}
+              onBlur={() => setFocusedInput(null)}
             />
           </View>
           
@@ -193,9 +208,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#087E66',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 10,
   },
   backBtn: {
     width: 38,
@@ -207,13 +226,13 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   backBtnText: {
     fontSize: 16,
-    color: '#1E293B',
+    color: '#FFFFFF',
     fontWeight: 'bold',
     marginRight: 2,
   },
@@ -225,7 +244,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#FFFFFF',
     letterSpacing: 1,
   },
   headerRight: {
@@ -233,12 +252,13 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    paddingBottom: 40,
   },
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    padding: 25,
-    marginBottom: 30,
+    padding: 22,
+    marginBottom: 24,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#0F172A',
@@ -248,7 +268,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
     fontSize: 13,
@@ -261,10 +281,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 50,
     paddingHorizontal: 15,
-    fontSize: 16,
+    fontSize: 15,
     color: '#1E293B',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    fontWeight: '500',
+  },
+  inputFocused: {
+    borderColor: '#087E66',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
   },
   statusToggleContainer: {
     flexDirection: 'row',
@@ -279,10 +305,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   statusBtnActive: {
-    backgroundColor: '#10B981', // Green
+    backgroundColor: '#10B981',
   },
   statusBtnInactive: {
-    backgroundColor: '#EF4444', // Red
+    backgroundColor: '#EF4444',
   },
   statusBtnText: {
     fontSize: 14,
@@ -303,7 +329,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   saveBtn: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: '#087E66',
     borderRadius: 14,
     height: 60,
     justifyContent: 'center',

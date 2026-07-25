@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   StatusBar,
   TextInput,
@@ -17,12 +16,24 @@ import { useFocusEffect } from '@react-navigation/native';
 import Sidebar from '../../components/Sidebar';
 import BottomNav from '../../components/BottomNav';
 import { useAuth } from '../../context/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deleteVehicle, getVehicles, getStoredToken } from '../../services/vehicleService';
 
 const { width } = Dimensions.get('window');
 
-const AdminVehicleListScreen = ({ navigation }) => {
+// Custom red trash can icon drawn with components
+const RedTrashIcon = () => (
+  <View style={iconStyles.trashContainer}>
+    <View style={iconStyles.trashHandle} />
+    <View style={iconStyles.trashLid} />
+    <View style={iconStyles.trashBody}>
+      <View style={iconStyles.trashLine} />
+      <View style={iconStyles.trashLine} />
+    </View>
+  </View>
+);
+
+const AdminVehicleListScreen = ({ navigation, route }) => {
+  const { username: routeUsername } = route?.params || {};
   const [vehicles, setVehicles] = useState([]);
   const [filteredVehicles, setFilteredVehicles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,7 +41,7 @@ const AdminVehicleListScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { userData } = useAuth();
-  const username = userData?.email?.split('@')[0] || 'Admin';
+  const username = routeUsername || userData?.email?.split('@')[0] || 'Admin';
 
   const fetchVehicles = async () => {
     setLoading(true);
@@ -74,11 +85,6 @@ const AdminVehicleListScreen = ({ navigation }) => {
     setFilteredVehicles(filtered);
   }, [searchQuery, vehicles]);
 
-  const getStatusColor = (status) => {
-    const stat = (status || 'ACTIVE').toUpperCase();
-    return stat === 'ACTIVE' ? '#10B981' : '#EF4444';
-  };
-
   const normalizeVehicleId = (id) => id?.toString?.() || '';
 
   const handleDeleteVehicle = (vehicleId) => {
@@ -121,32 +127,6 @@ const AdminVehicleListScreen = ({ navigation }) => {
     );
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-        <StatusBar barStyle="dark-content" />
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.menuBtn}
-            onPress={() => setIsSidebarOpen(true)}
-          >
-            <Text style={styles.menuIconText}>☰</Text>
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>VEHICLES</Text>
-          </View>
-          <TouchableOpacity style={styles.menuBtn}>
-            <Text style={styles.menuIconText}>{username.charAt(0).toUpperCase()}</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#087E66" />
-          <Text style={styles.loadingText}>Loading vehicles...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" />
@@ -168,14 +148,14 @@ const AdminVehicleListScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>VEHICLES</Text>
+          <Text style={styles.headerTitle}>VEHICLE LIST</Text>
         </View>
 
         <TouchableOpacity
-          style={styles.newVehicleBtn}
+          style={styles.newBtn}
           onPress={() => navigation.navigate('AddVehicle')}
         >
-          <Text style={styles.newVehicleBtnText}>+ New</Text>
+          <Text style={styles.newBtnText}>+ New Vehicle</Text>
         </TouchableOpacity>
       </View>
 
@@ -192,7 +172,12 @@ const AdminVehicleListScreen = ({ navigation }) => {
           />
         </View>
 
-        {error ? (
+        {loading && vehicles.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#087E66" />
+            <Text style={styles.loadingText}>Loading vehicles...</Text>
+          </View>
+        ) : error ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
             <Text style={styles.errorText}>{error}</Text>
@@ -200,7 +185,7 @@ const AdminVehicleListScreen = ({ navigation }) => {
               style={styles.retryBtn}
               onPress={fetchVehicles}
             >
-              <Text style={styles.retryBtnText}>Retry</Text>
+              <Text style={styles.retryBtnText}>Retry / Refresh</Text>
             </TouchableOpacity>
           </View>
         ) : filteredVehicles.length === 0 ? (
@@ -212,43 +197,47 @@ const AdminVehicleListScreen = ({ navigation }) => {
           <FlatList
             data={filteredVehicles}
             keyExtractor={(item) => item.vehicle_id?.toString() || Math.random().toString()}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
             renderItem={({ item }) => (
-              <View style={styles.vehicleCard}>
-                <View style={styles.vehicleLeft}>
-                  <Text style={styles.vehicleIcon}>🚚</Text>
+              <View style={styles.card}>
+                <View style={styles.cardLeft}>
+                  <View style={styles.avatarIconContainer}>
+                    <Text style={styles.avatarIcon}>🚚</Text>
+                  </View>
+                  <View style={styles.vehicleMeta}>
+                    <Text style={styles.name} numberOfLines={1}>{item.vehicle_name || 'N/A'}</Text>
+                    <Text style={styles.numberSubtext}>🔢 {item.vehicle_no || 'N/A'}</Text>
+                    {item.vehicle_owner ? (
+                      <Text style={styles.contactSubtext}>Owner: {item.vehicle_owner}</Text>
+                    ) : null}
+                  </View>
                 </View>
 
-                <View style={styles.vehicleMiddle}>
-                  <Text style={styles.vehicleName}>{item.vehicle_name || 'N/A'}</Text>
-                  <Text style={styles.vehicleNo}>Reg: {item.vehicle_no || 'N/A'}</Text>
-                  <Text style={styles.vehicleOwner}>Owner: {item.vehicle_owner || 'N/A'}</Text>
-                </View>
-
-                <View style={styles.vehicleRight}>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.vehicle_status || item.status) + '20', borderColor: getStatusColor(item.vehicle_status || item.status) }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(item.vehicle_status || item.status) }]}>
-                      {((item.vehicle_status || item.status || 'ACTIVE')).toString().toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={styles.moreBtn}
-                      onPress={() => navigation.navigate('AddVehicle', { vehicle: item })}
-                    >
-                      <Text style={styles.moreBtnText}>✎</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteBtn}
-                      onPress={() => handleDeleteVehicle(item.vehicle_id ?? item.vehicleId ?? item.id)}
-                    >
-                      <Text style={styles.deleteBtnText}>🗑</Text>
-                    </TouchableOpacity>
-                  </View>
+                <View style={styles.cardRight}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      (item.vehicle_status || item.status || '').trim().toUpperCase() === 'ACTIVE'
+                        ? styles.statusActiveDot
+                        : styles.statusInactiveDot
+                    ]}
+                  />
+                  <TouchableOpacity
+                    style={styles.actionEditBtn}
+                    onPress={() => navigation.navigate('AddVehicle', { vehicle: item })}
+                  >
+                    <Text style={styles.actionEditIcon}>✎</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionDeleteBtn}
+                    onPress={() => handleDeleteVehicle(item.vehicle_id ?? item.vehicleId ?? item.id)}
+                  >
+                    <RedTrashIcon />
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
-            contentContainerStyle={styles.listContent}
-            scrollEnabled={true}
           />
         )}
       </View>
@@ -257,6 +246,47 @@ const AdminVehicleListScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
+
+const iconStyles = StyleSheet.create({
+  trashContainer: {
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  trashHandle: {
+    width: 6,
+    height: 2,
+    backgroundColor: '#DC2626',
+    borderTopLeftRadius: 1,
+    borderTopRightRadius: 1,
+    marginBottom: 1,
+  },
+  trashLid: {
+    width: 14,
+    height: 2,
+    backgroundColor: '#DC2626',
+    borderRadius: 1,
+    marginBottom: 1,
+  },
+  trashBody: {
+    width: 10,
+    height: 10,
+    backgroundColor: '#DC2626',
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 1,
+    paddingHorizontal: 2,
+  },
+  trashLine: {
+    width: 1.5,
+    height: '100%',
+    backgroundColor: '#FFFFFF',
+    opacity: 0.8,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -270,180 +300,195 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: StatusBar.currentHeight + 10 || 50,
     paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#087E66',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 10,
+  },
+  menuBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuIconText: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginLeft: 12,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#087E66',
-  },
-  menuBtn: {
-    padding: 8,
-  },
-  menuIconText: {
-    fontSize: 24,
-    color: '#087E66',
-  },
-  newVehicleBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#087E66',
-    borderRadius: 6,
-  },
-  newVehicleBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  newBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  newBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#087E66',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    padding: 16,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 48,
     marginBottom: 16,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   searchIcon: {
     fontSize: 16,
-    marginRight: 8,
+    marginRight: 10,
+    color: '#64748B',
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 10,
     fontSize: 14,
     color: '#1E293B',
+    fontWeight: '500',
   },
-  vehicleCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    alignItems: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  vehicleLeft: {
-    fontSize: 32,
-    marginRight: 12,
-  },
-  vehicleIcon: {
-    fontSize: 32,
-  },
-  vehicleMiddle: {
-    flex: 1,
-  },
-  vehicleName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  vehicleNo: {
-    fontSize: 12,
-    color: '#64748B',
-    marginBottom: 2,
-  },
-  vehicleOwner: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  vehicleRight: {
-    alignItems: 'flex-end',
-    marginLeft: 10,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginBottom: 8,
-    borderWidth: 1,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  moreBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreBtnText: {
-    fontSize: 14,
-    color: '#1E293B',
-  },
-  deleteBtn: {
-    width: 40,
-    height: 40,
-    minWidth: 40,
-    minHeight: 40,
-    borderRadius: 20,
-    backgroundColor: '#FEE2E2',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteBtnText: {
-    fontSize: 16,
-    color: '#DC2626',
-  },
-  moreBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  moreBtnText: {
-    fontSize: 18,
-    color: '#087E66',
-  },
-  listContent: {
-    paddingBottom: 16,
+  scrollContent: {
+    paddingBottom: 20,
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748B',
   },
-  errorContainer: {
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
+    marginRight: 10,
+  },
+  avatarIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#E6F2F0',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    marginRight: 12,
+  },
+  avatarIcon: {
+    fontSize: 20,
+  },
+  vehicleMeta: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  numberSubtext: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#087E66',
+    marginTop: 2,
+  },
+  contactSubtext: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  cardRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusActiveDot: {
+    backgroundColor: '#10B981',
+  },
+  statusInactiveDot: {
+    backgroundColor: '#EF4444',
+  },
+  actionEditBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#0ea5e9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionEditIcon: {
+    color: '#0ea5e9',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  actionDeleteBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
   errorIcon: {
-    fontSize: 48,
+    fontSize: 32,
     marginBottom: 10,
   },
   errorText: {
@@ -451,30 +496,33 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     textAlign: 'center',
     marginBottom: 16,
+    fontWeight: '600',
   },
   retryBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
     backgroundColor: '#087E66',
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   retryBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
   emptyIcon: {
     fontSize: 48,
     marginBottom: 10,
+    opacity: 0.2,
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748B',
+    fontWeight: '600',
+    color: '#94A3B8',
   },
 });
 

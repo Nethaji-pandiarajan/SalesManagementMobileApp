@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, LogBox } from 'react-native';
+
+LogBox.ignoreAllLogs();
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -31,6 +33,8 @@ import AddProductScreen from './src/screens/AddProductScreen';
 import UserSalesAudit from './src/screens/UserSalesAudit';
 import PreorderScreen from './src/screens/PreorderScreen';
 import PreorderDetailScreen from './src/screens/PreorderDetailScreen';
+import ShopManagementScreen from './src/screens/admin/ShopManagementScreen';
+import AreaManagementScreen from './src/screens/admin/AreaManagementScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -85,6 +89,8 @@ function RootNavigator() {
             <Stack.Screen name="UserManagement" component={UserListScreen} />
             <Stack.Screen name="AddUser" component={AddUserScreen} initialParams={{ user: null }} />
             <Stack.Screen name="SupplyManagement" component={SupplyManagementScreen} />
+            <Stack.Screen name="ShopManagement" component={ShopManagementScreen} />
+            <Stack.Screen name="AreaManagement" component={AreaManagementScreen} />
             <Stack.Screen name="AdminSalesReports" component={ReportsScreen} />
             <Stack.Screen name="AdminEOD" component={ReconciliationScreen} />
           </>

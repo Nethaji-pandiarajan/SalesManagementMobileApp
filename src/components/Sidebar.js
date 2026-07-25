@@ -52,23 +52,25 @@ const Sidebar = ({ isOpen, onClose, navigation, username }) => {
   const isAdmin = userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin';
 
   const adminMenuItems = [
-    { name: 'Dashboard', icon: '⌂', route: 'AdminDashboard' },
+    { name: 'Dashboard', icon: '🏠', route: 'AdminDashboard' },
     { name: 'Product Management', icon: '📦', route: 'ProductManagement' },
-    { name: 'User Management', icon: '👥', route: 'UserManagement' },
-    { name: 'Supply Management', icon: '🚚', route: 'SupplyManagement' },
-    { name: 'Preorders', icon: '📝', route: 'Preorder' },
+    { name: 'User Management', icon: '👤', route: 'UserManagement' },
+    { name: 'Shop Management', icon: '🏪', route: 'ShopManagement' },
+    { name: 'Area Management', icon: '📍', route: 'AreaManagement' },
+    { name: 'Supply Management', icon: '📋', route: 'SupplyManagement' },
+    { name: 'Preorders', icon: '🛒', route: 'Preorder' },
     { name: 'Sales Reports', icon: '📊', route: 'Reports' },
     { name: 'EOD Reconciliation', icon: '💰', route: 'AdminEOD' },
     { name: 'Vehicles', icon: '🚚', route: 'AdminVehicleList' },
   ];
 
   const executiveMenuItems = [
-    { name: 'Dashboard', icon: '⌂', route: 'Dashboard' },
-    { name: 'Inventory', icon: '☷', route: 'Inventory' },
-    { name: 'Shops', icon: '⚲', route: 'Shops' },
-    { name: 'Preorders', icon: '📝', route: 'Preorder' },
-    { name: 'Reports', icon: '◫', route: 'Reports' },
-    { name: 'Sales audit', icon: '◈', route: 'UserSalesAudit' },
+    { name: 'Dashboard', icon: '🏠', route: 'Dashboard' },
+    { name: 'Inventory', icon: '📦', route: 'Inventory' },
+    { name: 'Shops', icon: '🏪', route: 'Shops' },
+    { name: 'Preorders', icon: '🛒', route: 'Preorder' },
+    { name: 'Reports', icon: '📊', route: 'Reports' },
+    { name: 'Sales audit', icon: '🔍', route: 'UserSalesAudit' },
   ];
 
   const menuItems = isAdmin ? adminMenuItems : executiveMenuItems;

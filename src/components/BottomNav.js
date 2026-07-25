@@ -7,22 +7,22 @@ const BottomNav = ({ navigation, currentRoute }) => {
   const isAdmin = userData?.role === 'admin' || userData?.role_id === 1 || userData?.role_id === 3 || userData?.role_name?.toLowerCase() === 'admin';
 
   const adminTabs = [
-    { name: 'Dashboard', icon: '⌂', route: 'AdminDashboard' },
+    { name: 'Dashboard', icon: '🏠', route: 'AdminDashboard' },
     { name: 'Products', icon: '📦', route: 'ProductManagement' },
-    { name: 'Users', icon: '👥', route: 'UserManagement' },
-    { name: 'Supply', icon: '🚚', route: 'SupplyManagement' },
+    { name: 'Users', icon: '👤', route: 'UserManagement' },
+    { name: 'Supply', icon: '📋', route: 'SupplyManagement' },
     { name: 'Reports', icon: '📊', route: 'Reports' },
     { name: 'EOD', icon: '💰', route: 'AdminEOD' },
     { name: 'Vehicles', icon: '🚚', route: 'AdminVehicleList' },
   ];
 
   const executiveTabs = [
-    { name: 'Home', icon: '⌂', route: 'Dashboard' },
-    { name: 'Preorders', icon: '📝', route: 'Preorder' },
-    { name: 'Inventory', icon: '☷', route: 'Inventory' },
-    { name: 'Shops', icon: '⚲', route: 'Shops' },
-    { name: 'Reports', icon: '◫', route: 'Reports' },
-    { name: 'Audit', icon: '◈', route: 'UserSalesAudit' },
+    { name: 'Home', icon: '🏠', route: 'Dashboard' },
+    { name: 'Preorders', icon: '🛒', route: 'Preorder' },
+    { name: 'Inventory', icon: '📦', route: 'Inventory' },
+    { name: 'Shops', icon: '🏪', route: 'Shops' },
+    { name: 'Reports', icon: '📊', route: 'Reports' },
+    { name: 'Audit', icon: '🔍', route: 'UserSalesAudit' },
   ];
 
   const tabs = isAdmin ? adminTabs : executiveTabs;
