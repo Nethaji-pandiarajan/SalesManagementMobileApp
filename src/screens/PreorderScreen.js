@@ -705,14 +705,12 @@ const PreorderScreen = ({ navigation, route }) => {
                         <Text style={styles.label}>Quantity</Text>
                         <TextInput
                           style={styles.input}
-                          placeholder="0"
-                          placeholderTextColor="#94A3B8"
                           keyboardType="numeric"
-                          selectTextOnFocus={true}
-                          value={quantity || ''}
+                          value={quantity || '0'}
                           onChangeText={(txt) => {
                             const cleaned = txt.replace(/^0+(?=\d)/, '');
-                            const sanitized = cleaned.replace(/[^0-9]/g, '');
+                            let sanitized = cleaned.replace(/[^0-9]/g, '');
+                            if (sanitized === '') sanitized = '0';
                             setQuantity(sanitized);
                             if (selectedProductRate > 0) {
                               const qNum = parseInt(sanitized, 10);

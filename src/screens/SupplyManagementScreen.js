@@ -36,10 +36,10 @@ const RedTrashIcon = () => (
 
 // 4 default oil types for load sheet generator
 const DEFAULT_OIL_TYPES = [
-  { id: '1', name: 'Jo Gold Chekku Gingelly Oil', defaultQty: '' },
-  { id: '2', name: 'Sri Lakshmi Chekku Gingelly Oil', defaultQty: '' },
-  { id: '3', name: 'Jo Gold Chekku Groundnut Oil', defaultQty: '' },
-  { id: '4', name: 'Maha Gold Deepam Oil', defaultQty: '' },
+  { id: '1', name: 'Jo Gold Chekku Gingelly Oil', defaultQty: '0' },
+  { id: '2', name: 'Sri Lakshmi Chekku Gingelly Oil', defaultQty: '0' },
+  { id: '3', name: 'Jo Gold Chekku Groundnut Oil', defaultQty: '0' },
+  { id: '4', name: 'Maha Gold Deepam Oil', defaultQty: '0' },
 ];
 
 const SupplyManagementScreen = ({ navigation, route }) => {
@@ -87,10 +87,10 @@ const SupplyManagementScreen = ({ navigation, route }) => {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [formAreas, setFormAreas] = useState('');
   const [formOils, setFormOils] = useState({
-    '1': '',
-    '2': '',
-    '3': '',
-    '4': '',
+    '1': '0',
+    '2': '0',
+    '3': '0',
+    '4': '0',
   });
 
   // Dropdown visibility simulation
@@ -202,7 +202,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
     setFormAreas('');
     const initialOils = {};
     oilTypes.forEach(oil => {
-      initialOils[oil.id] = '';
+      initialOils[oil.id] = '0';
     });
     setFormOils(initialOils);
     setSelectedRecordId(null);
@@ -217,8 +217,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
     setFormAreas(record.areas_covered);
     const editOils = {};
     Object.keys(record.oils || {}).forEach(k => {
-      const val = String(record.oils[k] || '');
-      editOils[k] = val === '0' ? '' : val;
+      editOils[k] = String(record.oils[k] || '0');
     });
     setFormOils(editOils);
     setSelectedRecordId(record.supply_id);
@@ -226,9 +225,12 @@ const SupplyManagementScreen = ({ navigation, route }) => {
   };
 
   const handleOilQtyChange = (oilId, value) => {
-    // Strip leading zeros before digits (e.g. "05" -> "5")
+    // Strip leading zeros before digits (e.g. "05" -> "5", "00" -> "0")
     let cleaned = value.replace(/^0+(?=\d)/, '');
     let sanitized = cleaned.replace(/[^0-9.]/g, '');
+    if (sanitized === '') {
+      sanitized = '0';
+    }
     setFormOils(prev => ({
       ...prev,
       [oilId]: sanitized,
@@ -842,10 +844,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                     <TextInput
                       style={styles.oilQtyInput}
                       keyboardType="numeric"
-                      placeholder="0"
-                      placeholderTextColor="#94A3B8"
-                      selectTextOnFocus={true}
-                      value={formOils[oil.id] || ''}
+                      value={formOils[oil.id] || '0'}
                       onChangeText={(val) => handleOilQtyChange(oil.id, val)}
                     />
                   </View>
