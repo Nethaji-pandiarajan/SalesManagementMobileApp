@@ -98,6 +98,14 @@ const PreorderScreen = ({ navigation, route }) => {
   const [preorderPaymentType, setPreorderPaymentType] = useState('CASH');
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
+  const getTodayStr = () => {
+    const today = new Date();
+    const yStr = String(today.getFullYear());
+    const mStr = String(today.getMonth() + 1).padStart(2, '0');
+    const dStr = String(today.getDate()).padStart(2, '0');
+    return `${yStr}-${mStr}-${dStr}`;
+  };
+
   // Category & Product Cascade States
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
@@ -229,6 +237,10 @@ const PreorderScreen = ({ navigation, route }) => {
     }
     if (!deliveryDate.trim()) {
       Alert.alert('Error', 'Please enter a delivery date.');
+      return;
+    }
+    if (deliveryDate.trim() < getTodayStr()) {
+      Alert.alert('Invalid Delivery Date', 'Delivery date cannot be in the past. Please choose today or a future date.');
       return;
     }
 
@@ -384,7 +396,7 @@ const PreorderScreen = ({ navigation, route }) => {
     setSelectedProductRate(0);
     setQuantity('');
     setAmount('');
-    setDeliveryDate('');
+    setDeliveryDate(getTodayStr());
     setPreorderStatus('PENDING');
     setPreorderPaidAmount('0');
     setPreorderPaymentType('CASH');
@@ -693,11 +705,24 @@ const PreorderScreen = ({ navigation, route }) => {
                         <Text style={styles.label}>Quantity</Text>
                         <TextInput
                           style={styles.input}
-                          placeholder="e.g. 5"
+                          placeholder="0"
                           placeholderTextColor="#94A3B8"
                           keyboardType="numeric"
-                          value={quantity}
-                          onChangeText={setQuantity}
+                          selectTextOnFocus={true}
+                          value={quantity || ''}
+                          onChangeText={(txt) => {
+                            const cleaned = txt.replace(/^0+(?=\d)/, '');
+                            const sanitized = cleaned.replace(/[^0-9]/g, '');
+                            setQuantity(sanitized);
+                            if (selectedProductRate > 0) {
+                              const qNum = parseInt(sanitized, 10);
+                              if (!isNaN(qNum) && qNum > 0) {
+                                setAmount(String(qNum * selectedProductRate));
+                              } else {
+                                setAmount('');
+                              }
+                            }
+                          }}
                         />
                       </View>
                       <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -847,6 +872,7 @@ const PreorderScreen = ({ navigation, route }) => {
                     onClose={() => setIsDatePickerOpen(false)}
                     selectedDate={deliveryDate}
                     onSelectDate={(date) => setDeliveryDate(date)}
+                    minDate={getTodayStr()}
                   />
                 </ScrollView>
               </>
@@ -1294,6 +1320,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 48,
     paddingHorizontal: 16,
+    paddingVertical: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
     fontSize: 14,
     color: '#1E293B',
   },

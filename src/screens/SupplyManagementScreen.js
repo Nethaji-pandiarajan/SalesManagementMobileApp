@@ -19,6 +19,7 @@ import { globalVehiclesList } from './VehicleListScreen';
 import BottomNav from '../components/BottomNav';
 import CONFIG from '../config/config';
 import { getStoredToken } from '../services/vehicleService';
+import DatePickerModal from '../components/DatePickerModal';
 
 
 // Custom universal red trash can icon
@@ -35,10 +36,10 @@ const RedTrashIcon = () => (
 
 // 4 default oil types for load sheet generator
 const DEFAULT_OIL_TYPES = [
-  { id: '1', name: 'Jo Gold Chekku Gingelly Oil', defaultQty: '0' },
-  { id: '2', name: 'Sri Lakshmi Chekku Gingelly Oil', defaultQty: '0' },
-  { id: '3', name: 'Jo Gold Chekku Groundnut Oil', defaultQty: '0' },
-  { id: '4', name: 'Maha Gold Deepam Oil', defaultQty: '0' },
+  { id: '1', name: 'Jo Gold Chekku Gingelly Oil', defaultQty: '' },
+  { id: '2', name: 'Sri Lakshmi Chekku Gingelly Oil', defaultQty: '' },
+  { id: '3', name: 'Jo Gold Chekku Groundnut Oil', defaultQty: '' },
+  { id: '4', name: 'Maha Gold Deepam Oil', defaultQty: '' },
 ];
 
 const SupplyManagementScreen = ({ navigation, route }) => {
@@ -81,14 +82,15 @@ const SupplyManagementScreen = ({ navigation, route }) => {
 
   // Form State
   const [formDate, setFormDate] = useState('');
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [formAreas, setFormAreas] = useState('');
   const [formOils, setFormOils] = useState({
-    '1': '0',
-    '2': '0',
-    '3': '0',
-    '4': '0',
+    '1': '',
+    '2': '',
+    '3': '',
+    '4': '',
   });
 
   // Dropdown visibility simulation
@@ -200,7 +202,7 @@ const SupplyManagementScreen = ({ navigation, route }) => {
     setFormAreas('');
     const initialOils = {};
     oilTypes.forEach(oil => {
-      initialOils[oil.id] = '0';
+      initialOils[oil.id] = '';
     });
     setFormOils(initialOils);
     setSelectedRecordId(null);
@@ -213,17 +215,23 @@ const SupplyManagementScreen = ({ navigation, route }) => {
     setSelectedVehicleId(String(record.vehicle_id));
     setSelectedUserId(String(record.user_id));
     setFormAreas(record.areas_covered);
-    setFormOils({ ...record.oils });
+    const editOils = {};
+    Object.keys(record.oils || {}).forEach(k => {
+      const val = String(record.oils[k] || '');
+      editOils[k] = val === '0' ? '' : val;
+    });
+    setFormOils(editOils);
     setSelectedRecordId(record.supply_id);
     setIsModalOpen(true);
   };
 
   const handleOilQtyChange = (oilId, value) => {
-    // Sanitize to numerical string
-    const sanitized = value.replace(/[^0-9.]/g, '');
+    // Strip leading zeros before digits (e.g. "05" -> "5")
+    let cleaned = value.replace(/^0+(?=\d)/, '');
+    let sanitized = cleaned.replace(/[^0-9.]/g, '');
     setFormOils(prev => ({
       ...prev,
-      [oilId]: sanitized || '0',
+      [oilId]: sanitized,
     }));
   };
 
@@ -253,12 +261,17 @@ const SupplyManagementScreen = ({ navigation, route }) => {
         return;
       }
 
+      const cleanedOils = {};
+      Object.keys(formOils || {}).forEach(k => {
+        cleanedOils[k] = !formOils[k] || formOils[k].trim() === '' ? '0' : formOils[k];
+      });
+
       const payload = {
         date: formDate,
         vehicle_id: parseInt(selectedVehicleId, 10),
         user_id: parseInt(selectedUserId, 10),
         areas_covered: formAreas,
-        oils: formOils,
+        oils: cleanedOils,
       };
 
       const url = selectedRecordId
@@ -702,14 +715,16 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                 <Text style={styles.sectionTitle}>Daily Plan Creator</Text>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. 2026-05-21"
-                    placeholderTextColor="#94A3B8"
-                    value={formDate}
-                    onChangeText={setFormDate}
-                  />
+                  <Text style={styles.label}>Plan Date</Text>
+                  <TouchableOpacity
+                    style={[styles.input, { justifyContent: 'center' }]}
+                    activeOpacity={0.7}
+                    onPress={() => setIsDatePickerOpen(true)}
+                  >
+                    <Text style={{ color: formDate ? '#1E293B' : '#94A3B8', fontSize: 14 }}>
+                      {formDate || 'Select plan date (YYYY-MM-DD)'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Vehicle Selection */}
@@ -829,7 +844,8 @@ const SupplyManagementScreen = ({ navigation, route }) => {
                       keyboardType="numeric"
                       placeholder="0"
                       placeholderTextColor="#94A3B8"
-                      value={formOils[oil.id]}
+                      selectTextOnFocus={true}
+                      value={formOils[oil.id] || ''}
                       onChangeText={(val) => handleOilQtyChange(oil.id, val)}
                     />
                   </View>
@@ -845,6 +861,14 @@ const SupplyManagementScreen = ({ navigation, route }) => {
           </SafeAreaView>
         </View>
       </Modal>
+
+      <DatePickerModal
+        isOpen={isDatePickerOpen}
+        onClose={() => setIsDatePickerOpen(false)}
+        selectedDate={formDate}
+        onSelectDate={(date) => setFormDate(date)}
+        minDate={null}
+      />
 
       <BottomNav navigation={navigation} currentRoute="SupplyManagement" />
     </SafeAreaView>
@@ -1173,6 +1197,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 48,
     paddingHorizontal: 12,
+    paddingVertical: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
     fontSize: 14,
     color: '#1E293B',
     borderWidth: 1,
@@ -1238,17 +1265,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   oilQtyInput: {
-    width: 80,
-    height: 36,
+    width: 84,
+    height: 38,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    textAlign: 'center',
+    textAlign: 'right',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
     fontSize: 14,
     color: '#1E293B',
     fontWeight: '700',
-    padding: 0,
+    paddingVertical: 0,
+    paddingRight: 10,
+    paddingLeft: 6,
   },
   saveBtn: {
     backgroundColor: '#087E66',

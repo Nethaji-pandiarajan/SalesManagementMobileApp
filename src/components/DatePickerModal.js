@@ -10,19 +10,45 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const DatePickerModal = ({ isOpen, onClose, selectedDate, onSelectDate }) => {
+// Local YYYY-MM-DD formatter without timezone shifts
+const getTodayStr = () => {
+  const today = new Date();
+  const yStr = String(today.getFullYear());
+  const mStr = String(today.getMonth() + 1).padStart(2, '0');
+  const dStr = String(today.getDate()).padStart(2, '0');
+  return `${yStr}-${mStr}-${dStr}`;
+};
+
+// Timezone-safe date parser for YYYY-MM-DD string
+const parseDateString = (dateStr) => {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const parts = dateStr.trim().split('-').map(Number);
+  if (parts.length === 3 && !parts.some(isNaN)) {
+    // year, 0-indexed month, day
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  return null;
+};
+
+const DatePickerModal = ({ isOpen, onClose, selectedDate, onSelectDate, minDate }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Keep internal currentDate in sync with selectedDate when modal opens
+  const effectiveMin = minDate === undefined ? getTodayStr() : minDate;
+
+  // Keep internal currentDate in sync with selectedDate, but never allow opening to a past month
   useEffect(() => {
     if (isOpen) {
-      if (selectedDate && !isNaN(Date.parse(selectedDate))) {
-        setCurrentDate(new Date(selectedDate));
+      const parsed = parseDateString(selectedDate);
+      const minParsed = parseDateString(effectiveMin);
+      if (parsed && minParsed && parsed < minParsed) {
+        setCurrentDate(minParsed);
+      } else if (parsed) {
+        setCurrentDate(parsed);
       } else {
-        setCurrentDate(new Date());
+        setCurrentDate(minParsed || new Date());
       }
     }
-  }, [isOpen, selectedDate]);
+  }, [isOpen, selectedDate, effectiveMin]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0-indexed
@@ -81,8 +107,24 @@ const DatePickerModal = ({ isOpen, onClose, selectedDate, onSelectDate }) => {
       isCurrentMonth: false,
     });
   }
+  const isPastDate = (day, m, y) => {
+    const targetStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return targetStr < effectiveMin;
+  };
+
+  const canGoPrevMonth = () => {
+    if (!effectiveMin) return true;
+    const parts = effectiveMin.split('-').map(Number);
+    if (parts.length < 2) return true;
+    const minY = parts[0];
+    const minM = parts[1] - 1; // 0-indexed month
+    if (year < minY) return false;
+    if (year === minY && month <= minM) return false;
+    return true;
+  };
 
   const handlePrevMonth = () => {
+    if (!canGoPrevMonth()) return;
     setCurrentDate(new Date(year, month - 1, 1));
   };
 
@@ -91,7 +133,9 @@ const DatePickerModal = ({ isOpen, onClose, selectedDate, onSelectDate }) => {
   };
 
   const handleSelectDay = (dayObj) => {
-    // Format to YYYY-MM-DD
+    if (!dayObj.isCurrentMonth || isPastDate(dayObj.day, dayObj.month, dayObj.year)) {
+      return;
+    }
     const yStr = String(dayObj.year);
     const mStr = String(dayObj.month + 1).padStart(2, '0');
     const dStr = String(dayObj.day).padStart(2, '0');
@@ -107,7 +151,8 @@ const DatePickerModal = ({ isOpen, onClose, selectedDate, onSelectDate }) => {
 
   const isSelected = (day, m, y) => {
     if (!selectedDate) return false;
-    const sel = new Date(selectedDate);
+    const sel = parseDateString(selectedDate);
+    if (!sel) return false;
     return sel.getDate() === day && sel.getMonth() === m && sel.getFullYear() === y;
   };
 
@@ -122,8 +167,8 @@ const DatePickerModal = ({ isOpen, onClose, selectedDate, onSelectDate }) => {
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={handlePrevMonth} style={styles.navBtn}>
-              <Text style={styles.navText}>❮</Text>
+            <TouchableOpacity onPress={handlePrevMonth} style={styles.navBtn} disabled={!canGoPrevMonth()}>
+              <Text style={[styles.navText, !canGoPrevMonth() && styles.disabledNavText]}>❮</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>{`${monthNames[month]} ${year}`}</Text>
             <TouchableOpacity onPress={handleNextMonth} style={styles.navBtn}>
@@ -143,6 +188,7 @@ const DatePickerModal = ({ isOpen, onClose, selectedDate, onSelectDate }) => {
             {gridDays.map((dObj, idx) => {
               const selected = isSelected(dObj.day, dObj.month, dObj.year);
               const today = isToday(dObj.day, dObj.month, dObj.year);
+              const isPast = !dObj.isCurrentMonth || isPastDate(dObj.day, dObj.month, dObj.year);
 
               return (
                 <TouchableOpacity
@@ -150,8 +196,10 @@ const DatePickerModal = ({ isOpen, onClose, selectedDate, onSelectDate }) => {
                   style={[
                     styles.dayCell,
                     selected && styles.selectedDayCell,
+                    isPast && styles.disabledDayCell,
                   ]}
-                  onPress={() => handleSelectDay(dObj)}
+                  disabled={isPast}
+                  onPress={() => !isPast && handleSelectDay(dObj)}
                 >
                   <Text
                     style={[
@@ -159,11 +207,12 @@ const DatePickerModal = ({ isOpen, onClose, selectedDate, onSelectDate }) => {
                       !dObj.isCurrentMonth && styles.paddingDayText,
                       today && styles.todayText,
                       selected && styles.selectedDayText,
+                      isPast && styles.pastDayText,
                     ]}
                   >
                     {dObj.day}
                   </Text>
-                  {today && !selected && <View style={styles.todayDot} />}
+                  {today && !selected && !isPast && <View style={styles.todayDot} />}
                 </TouchableOpacity>
               );
             })}
@@ -218,6 +267,10 @@ const styles = StyleSheet.create({
     color: '#087E66',
     fontWeight: 'bold',
   },
+  disabledNavText: {
+    color: '#CBD5E1',
+    opacity: 0.3,
+  },
   weekdays: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -227,7 +280,7 @@ const styles = StyleSheet.create({
     width: (width * 0.88 - 32) / 7,
     textAlign: 'center',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#94A3B8',
   },
   grid: {
@@ -247,12 +300,18 @@ const styles = StyleSheet.create({
   selectedDayCell: {
     backgroundColor: '#087E66',
   },
+  disabledDayCell: {
+    opacity: 0.3,
+  },
   dayText: {
     fontSize: 13,
     fontWeight: '500',
     color: '#1E293B',
   },
   paddingDayText: {
+    color: '#CBD5E1',
+  },
+  pastDayText: {
     color: '#CBD5E1',
   },
   todayText: {
